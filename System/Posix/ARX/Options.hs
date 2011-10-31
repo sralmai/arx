@@ -79,7 +79,7 @@ tmpx                         =  do
   pSym "tmpx"
   () <$> pMaybe dashB <||> pMaybe dashO <||> pMany ioStream
  where
-  flagsAndArgs = pMaybe dashB <||> pMaybe dashO <||> pMaybe dashR 
+  flagsAndArgs = pMaybe dashB <||> pMaybe dashO <||> pMaybe dashR
 
 {-| An 'IOStream' is a source or sink for bytes, allowing one to start at the
     beginning and read or write to the end.
