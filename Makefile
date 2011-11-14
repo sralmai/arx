@@ -8,4 +8,4 @@ arxprof: arx
 	$(GHC) -rtsopts -prof -auto-all ./arx.hs -o arxprof -osuf p_o
 
 clean:
-	rm -rf ./tmp ./arx
+	rm -rf ./tmp ./arx ./arxprof
