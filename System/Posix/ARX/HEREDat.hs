@@ -116,7 +116,7 @@ encode nullReplaceByte escapeByte =
     | otherwise              =  Blaze.fromWord8 b
   nullReplacer               =  Blaze.fromWord8 nullReplaceByte
   escaper                    =  Blaze.fromWord8 escapeByte
-  underscore                 =  Blaze.fromWord8 (Bytes.c2w '_')
+  underscore                 =  Blaze.fromChar '_'
   escapedEscaper             =  mappend escaper underscore
   escapedNullReplacer        =  mappend escaper escaper
 
