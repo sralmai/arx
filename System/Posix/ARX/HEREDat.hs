@@ -106,9 +106,9 @@ chunk block
  -}
 encode                      ::  Word8 -> Word8 -> ByteString -> ByteString
 encode nullReplaceByte escapeByte =
-  Blaze.toByteString . Bytes.foldl' f mempty
+  Blaze.toByteString . Bytes.foldr f mempty
  where
-  f builder b                =  {-# SCC "f" #-} mappend builder (rewrite b)
+  f b builder                =  rewrite b `mappend` builder
   rewrite b
     | b == 0x00              =  nullReplacer
     | b == escapeByte        =  escapedEscaper
