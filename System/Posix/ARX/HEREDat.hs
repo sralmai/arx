@@ -39,11 +39,13 @@ import System.Posix.ARX.BlazeIsString
     stored in an 'EncodedChunk'.
  -}
 data Chunk                   =  SafeChunk !ByteString
-                             |  EncodedChunk !ByteString -- Encoded data.
+                             |  EncodedChunk !Blaze.Builder -- Encoded data.
                                              !Int        -- Original length.
                                              !EscapeChar -- Null replacer.
                                              !EscapeChar -- Escaper.
-deriving instance Show Chunk
+instance Show Chunk where
+  show (SafeChunk _)         =  "SafeChunk ..."
+  show (EncodedChunk _ _ _ _) = "EncodedChunk ..."
 instance IsString Chunk where
   fromString                 =  chunk . Data.ByteString.Char8.pack
 
@@ -104,9 +106,8 @@ chunk block
     to ensure that only the very last processor inserts escape characters, to
     prevent their further interpretation.
  -}
-encode                      ::  Word8 -> Word8 -> ByteString -> ByteString
-encode nullReplaceByte escapeByte =
-  Blaze.toByteString . Bytes.foldl' f mempty
+encode                      ::  Word8 -> Word8 -> ByteString -> Blaze.Builder
+encode nullReplaceByte escapeByte = Bytes.foldl' f mempty
  where
   f builder b                =  {-# SCC "f" #-} mappend builder (rewrite b)
   rewrite b
@@ -212,14 +213,14 @@ encoded (EncodedChunk _ _ _ _) = True
 {-|  
  -}
 script chunk                 =  mconcat $ case chunk of
-  SafeChunk bytes           ->  [clip len, dataSection eof bytes]
+  SafeChunk bytes           ->  [clip len, dataSection eof (blz bytes)]
    where
     len                      =  Bytes.length bytes
     eof                      =  blz (leastStringNotIn bytes)
-  EncodedChunk bytes len
+  EncodedChunk blaze len
                (EscapeChar _ trN _ sedRN) (EscapeChar b _ sedPE sedRE) ->
     [ "{ ", mconcat tr, " | ", mconcat sed, " | ", clip len, " ;}",
-      dataSection (Blaze.fromWord8 b) bytes ]
+      dataSection (Blaze.fromWord8 b) blaze ]
    where
     tr                       =  ["tr '", blz trN, "' '\\000'"]
     (e, e', n)               =  (blz sedPE, blz sedRE, blz sedRN)
@@ -228,7 +229,7 @@ script chunk                 =  mconcat $ case chunk of
  where
   blz                        =  Blaze.fromByteString
   nl                         =  Blaze.fromChar '\n'
-  dataSection eof bytes = mconcat [" <<\\", eof, nl, blz bytes, nl, eof, nl]
+  dataSection eof blaze      =  mconcat [" <<\\", eof, nl, blaze, nl, eof, nl]
   clip len                   =  "head -c " `mappend` Blaze.fromShow len
 
 {-| Finds a short hexadecimal string that is not in the input.
