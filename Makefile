@@ -2,7 +2,7 @@ GHC=ghc -outputdir ./tmp --make -O2
 
 
 arx: arx.hs
-	$(GHC) ./arx.hs -o arx
+	$(GHC) -ddump-rules -ddump-simpl-stats -dppr-debug ./arx.hs -o arx
 
 arxprof: arx
 	$(GHC) -rtsopts -prof -auto-all ./arx.hs -o arxprof -osuf p_o
