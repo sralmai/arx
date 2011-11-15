@@ -1,11 +1,18 @@
 GHC=ghc -outputdir ./tmp --make -O2
+GHCPROF=$(GHC) -prof -auto-all -osuf p_o
 
 
 arx: arx.hs
-	$(GHC) -ddump-rules -ddump-simpl-stats -dppr-debug ./arx.hs -o arx
+	$(GHC) ./arx.hs -o arx
 
 arxprof: arx
-	$(GHC) -rtsopts -prof -auto-all ./arx.hs -o arxprof -osuf p_o
+	$(GHCPROF) ./arx.hs -o arxprof
+
+rebuild: Rebuild.hs
+	$(GHC) -main-is Rebuild ./Rebuild.hs -o rebuild
+
+rebuildprof: rebuild
+	$(GHCPROF) -main-is Rebuild ./Rebuild.hs -o rebuildprof
 
 clean:
-	rm -rf ./tmp ./arx ./arxprof
+	rm -rf ./tmp ./arx ./arxprof ./rebuild ./rebuildprof
