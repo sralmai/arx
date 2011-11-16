@@ -1,5 +1,5 @@
 GHC=ghc -outputdir ./tmp --make -O2
-GHCPROF=$(GHC) -prof -auto-all -osuf p_o
+GHCPROF=$(GHC) -rtsopts -prof -auto-all -osuf p_o
 
 
 arx: arx.hs
