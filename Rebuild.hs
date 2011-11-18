@@ -6,8 +6,8 @@ import Control.Applicative
 import Control.Arrow (first)
 import Control.Monad
 import Control.Monad.ST
-import Data.ByteString.Lazy (ByteString)
-import qualified Data.ByteString.Lazy as Bytes
+import Data.ByteString (ByteString)
+import qualified Data.ByteString as Bytes
 import qualified Data.List as List
 import Data.Monoid
 import Data.Ord
@@ -16,7 +16,7 @@ import Data.String
 import Data.Word
 
 import Data.Vector.Unboxed (Vector)
-import qualified Data.Vector.Unboxed as Vector (create, length)
+import qualified Data.Vector.Unboxed as Vector (create, length, unfoldrN)
 import qualified Data.Vector.Unboxed.Mutable as Vector hiding (length)
 import qualified Data.Vector.Algorithms.Intro as Vector
 
@@ -25,7 +25,7 @@ main                         =  do
   bytes                     <-  Bytes.getContents
 --let out                    =  simple bytes
 --print (Bytes.length out)
-  let out                    =  rebuildAsVector bytes
+  let out                    =  vectorUnfold bytes
   print (Vector.length out)
 
 
@@ -50,4 +50,12 @@ rebuildAsVector bytes        =  byteVector
                                    modifySTRef counter (+!1)
   (+!)                       =  (+)
   --(+!) a b                   =  ((+) $! a) $! b
+
+vectorUnfold                ::  ByteString -> Vector Word8
+vectorUnfold bytes           =  vector
+ where
+  len                        =  fromIntegral (Bytes.length bytes * 2)
+  vector                    ::  Vector Word8
+  vector                     =  Vector.unfoldrN len f bytes
+  f                          =  Bytes.uncons
 
