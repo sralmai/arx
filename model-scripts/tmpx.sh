@@ -1,31 +1,35 @@
 #!/bin/sh
 set -e -u
 unset rm_ dir
-tmp=true ; run=true
-rm0=true ; rm1=true # To be set by tool.
-for arg in "$@"
+run=true
+rm0=true ; rm1=true ; tag=tmpx ; tmp=/tmp # To be set by tool.
+while [ $# > 0 ]
 do
-  case "$arg" in
+  tmp_set_by_option=false
+  case "$1" in
     --no-rm)    rm_=false ;;
     --no-run)   run=false ;;
-    --extract)  rm_=false ; tmp=false ; run=false ;;
+    --extract)  rm_=false ; run=false ; $tmp_set_by_option || tmp="" ;;
+    --tmp)      tmp="$2"  ; shift     ; tmp_set_by_option=true ;;
+    *)          echo 'Bad args.' >&2  ; exit 2 ;;
   esac
+  shift
 done
-if $tmp
+if [ "$tmp" != "" ]
 then
-  dir=/tmp/tmpx.`date -u +%FT%TZ`.$$
-  rm -rf $dir
+  dir="$tmp"/"$tag".`date -u +%FT%TZ`.$$
   : ${rm_:=true}
   if $rm_
   then
+    rm -rf "$dir"
     trap "case \$?/$rm0/$rm1 in
-            0/true/*)      rm -rf $dir ;;
-            [1-9]*/*/true) rm -rf $dir ;;
+            0/true/*)      rm -rf \"\$dir\" ;;
+            [1-9]*/*/true) rm -rf \"\$dir\" ;;
           esac" EXIT
     trap "exit 2" HUP INT QUIT BUS SEGV PIPE TERM
   fi
-  mkdir $dir
-  cd $dir
+  mkdir -p "$dir"
+  cd "$dir"
 fi
 go () {
   unpack_env > ./env
