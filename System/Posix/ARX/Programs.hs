@@ -59,6 +59,7 @@ instance ARX SHDAT LazyB.ByteString where
 
 data TMPX = TMPX SHDAT LazyB.ByteString -- Code of task to run.
                        [(Sh.Var, Sh.Val)] -- Environment mapping.
+                       ByteString -- Tag for directory where job is run.
                        Bool -- Destroy tmp if task runs successfully.
                        Bool -- Destroy tmp if task exits with an error code.
 instance ARX TMPX [(Tar, LazyB.ByteString)] where

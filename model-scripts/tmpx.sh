@@ -1,23 +1,26 @@
 #!/bin/sh
 set -e -u
 unset rm_ dir
-run=true
-rm0=true ; rm1=true ; tag=tmpx ; tmp=/tmp # To be set by tool.
+tmp=true ; run=true
+rm0=true ; rm1=true ; tag=/tmp/tmpx # To be set by tool.
 while [ $# > 0 ]
 do
-  tmp_set_by_option=false
   case "$1" in
     --no-rm)    rm_=false ;;
     --no-run)   run=false ;;
-    --extract)  rm_=false ; run=false ; $tmp_set_by_option || tmp="" ;;
-    --tmp)      tmp="$2"  ; shift     ; tmp_set_by_option=true ;;
+    --extract)  rm_=false ; tmp=false ; run=false;;
+    --tag)      tag="$2"  ; shift ;;
     *)          echo 'Bad args.' >&2  ; exit 2 ;;
   esac
   shift
 done
-if [ "$tmp" != "" ]
+if $tmp
 then
-  dir="$tmp"/"$tag".`date -u +%FT%TZ`.$$
+  tok=`date -u +%FT%TZ`.$$
+  case "$tag" in
+    */) dir="$tag$tok" ;;
+    *)  dir="$tag.$tok" ;;
+  esac
   : ${rm_:=true}
   if $rm_
   then
