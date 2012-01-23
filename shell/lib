@@ -1,21 +1,34 @@
 #!/bin/sh
 
+# Note that shell variables are implicitly global. Thus, we require that all
+# variables used in a function must be set in that function. Idempotent
+# generators, like `tag', allow variables to be shared.
 
 screen_S() {
-  tag
+  tag="`tag`"
   screen -S "$tag" "$@"
 }
 
-# Initialize screen with settings.
-screen_setup=false
-screen_setup() { $screen_setup || {
-  ( cd / ; screen_S -dm -ln sleep 2 ) # Ensure PWD for screen is /.
-  screen_setup=true
-  screen_S      -X eval 'screen 1 sleep 1' 'select 0' kill "$@"
-} }
+# Initialize screen with settings. Settings are fed to screen's eval function,
+# so each argument should be a string containg a whole setting, for example:
+#
+#   screen_setup 'zombie ko' 'defutf8 on'
+#
+screen_setup() {
+  if [ ! -n "${screen_setup:-}" ]
+  then
+    tag="`tag`"
+    ! { screen -ls | fgrep -q "$tag" ;} ||
+      { echo 'ERR: screen collision!' 1>&2 ; return 2 ;}
+    ( cd / ; screen_S -dm -ln sleep 2 ) # Ensure PWD for screen is /.
+    screen_setup=true
+    screen_S      -X eval 'screen 1 sleep 1' 'select 0' kill "$@"
+  fi
+}
 
 # Launch command in initialized screen.
 screend() {
+  tag="`tag`"
   screen_setup
   screen_S      -X screen 0 "$@"
   screen_S      -X eval 'select 1' kill
@@ -25,13 +38,13 @@ screend() {
 
 envx() {
   [ ! -f ./env ] || . ./env
-  exec "$@"
+  "$@"
 }
 
 
 tmpx_create() {
   tmp=/tmp      # Templated.
-  tag
+  tag="`tag`"
   dir="$tmp"/"$tag"
   [ ! -e "$dir" ] || { echo 'ERR: tmp dir collision!' 1>&2 ; return 2 ;}
   mkdir -p "$dir"
@@ -42,10 +55,10 @@ tmpx_trap_dot() {
   rm0=true      # Templated.
   rm1=true      # Templated.
   rm_=true
-  dir="`pwd -P`"
+  pwd="`pwd -P`"
   trap 'case $?/$rm0/$rm1 in
-          0/true/*)      rm -rf "$dir" ;;
-          [1-9]*/*/true) rm -rf "$dir" ;;
+          0/true/*)      rm -rf "$pwd" ;;
+          [1-9]*/*/true) rm -rf "$pwd" ;;
         esac' EXIT
   trap 'exit 2' HUP INT QUIT BUS SEGV PIPE TERM
   ( "$@" ) # We use a subshell to protect the trap and its environment.
@@ -57,7 +70,16 @@ files_oe() {
   "$@" 2>e 1>o
 }
 
+tee_oe() {
+  general_redirect o e tee "$@"
+}
+
+syslog_oe() {
+  general_redirect user.err user.info logger_shim "$@"
+}
+
 logger_shim() {
+  tag="`tag`"
   logger -t "$tag" -i -p "$1"
 }
 
@@ -82,16 +104,12 @@ general_redirect() {
   "$c" "$o" 2>&1 1>&1
 }
 
-tee_oe() {
-  general_redirect o e tee "$@"
-}
 
-syslog_oe() {
-  general_redirect user.err user.info logger_shim "$@"
-}
-
-
-# Haha, cd and run command.
+# Have to wrap cd so we can change the directory within the context of
+# external calls to the script. For example,
+#
+#  ./lib cdx <dir> files_oe
+#
 cdx() {
   target_dir="$1"
   shift
@@ -100,37 +118,40 @@ cdx() {
 }
 
 
-tag() { [ -n "${tag:-}" ] || {
-  label=arx     # Templated.
-  tag="$label".`date -u +%FT%TZ`.`pid_and_random_hex`
-} }
-
-pid_and_random_hex() {
-  { echo $$ ; head -c 8 /dev/urandom ;} | head -c 8 | hexdump -e '"%08x"'
+# Generates a tag for this process from the label, the date up to seconds and
+# the PID. The tag is used to label screen sessions, temporary directories and
+# so forth. It is very unlikely the tag will collide with any other created
+# tag; but all commands that create resources, like screen_setup, should check
+# for a collision and fail if one is found.
+tag() {
+  if [ ! -n "${tag:-}" ]
+  then
+    label=arx     # Templated.
+    tag="$label".`date -u +%FT%TZ`.$$
+  fi
+  echo "$tag"
 }
 
+
 case "${1:-}" in
-  tmpx_create|tmpx_trap_dot|envx|screend|cdx)
-    set -e -u
-    "$@" ;;
-  *)
-    echo 'Subcommand not found.' 1>&2
-    exit 2 ;;
+  tmpx_create|tmpx_trap_dot|envx|screend|cdx) set -eu
+                                              "$@" ;;
+  tmpx) set -eu
+        tmpx_create
+        tmpx_trap_dot "$@" ;;
+  ?*)   echo 'Subcommand not found.' 1>&2 ; exit 2 ;;
 esac
-
-exit
-
 
 
 # Must mkdir and unpack tarballs before running screen.
-tmpx_create
+#   tmpx_create
 # Tar unpacking goes here.
 # However, must setup screen before setting trap. We actually have to call in
 # to lib again, in a new shell.
-screend ./lib cdx "$dir" tmpx_trap_dot envx "$@"
+#   screend ./lib cdx "$dir" tmpx_trap_dot envx exec "$@"
 
 
 # Just run command in a tmp directory cleaned up with a trap.
-tmpx_create
-tmpx_trap_dot "$@"
+#   tmpx_create
+#   tmpx_trap_dot "$@"
 
