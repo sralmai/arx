@@ -51,7 +51,8 @@ tmpx_create() {
   cd "$dir"
 }
 
-tmpx_trap_dot() {
+tmpx_trap() {
+  cd "$1" ; shift
   rm0=true      # Templated.
   rm1=true      # Templated.
   rm_=true
@@ -148,10 +149,10 @@ esac
 # Tar unpacking goes here.
 # However, must setup screen before setting trap. We actually have to call in
 # to lib again, in a new shell.
-#   screend ./lib cdx "$dir" tmpx_trap_dot envx exec "$@"
+#   screend ./lib tmpx_trap "$dir" envx exec "$@"
 
 
 # Just run command in a tmp directory cleaned up with a trap.
 #   tmpx_create
-#   tmpx_trap_dot "$@"
+#   tmpx_trap "$@"
 
