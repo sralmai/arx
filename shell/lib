@@ -135,11 +135,11 @@ tag() {
 
 
 case "${1:-}" in
-  tmpx_create|tmpx_trap_dot|envx|screend|cdx) set -eu
+  tmpx_create|tmpx_trap|envx|screend|cdx) set -eu
                                               "$@" ;;
   tmpx) set -eu
         tmpx_create
-        tmpx_trap_dot "$@" ;;
+        tmpx_trap "$@" ;;
   ?*)   echo 'Subcommand not found.' 1>&2 ; exit 2 ;;
 esac
 
