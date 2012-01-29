@@ -43,7 +43,7 @@ envx() {
 
 
 tmpx_create() {
-  tmp=/tmp      # Templated.
+  : ${tmp:=/tmp}  # Templated.
   tag="`tag`"
   dir="$tmp"/"$tag"
   [ ! -e "$dir" ] || { echo 'ERR: tmp dir collision!' 1>&2 ; return 2 ;}
@@ -53,9 +53,9 @@ tmpx_create() {
 
 tmpx_trap() {
   cd "$1" ; shift
-  rm0=true      # Templated.
-  rm1=true      # Templated.
-  rm_=true
+  : ${rm0:=true}  # Templated.
+  : ${rm0:=true}  # Templated.
+  : ${rm_:=true}  # Might be set by options but definitely not templated.
   pwd="`pwd -P`"
   trap 'case $?/$rm0/$rm1 in
           0/true/*)      rm -rf "$pwd" ;;
@@ -127,7 +127,7 @@ cdx() {
 tag() {
   if [ ! -n "${tag:-}" ]
   then
-    label=arx     # Templated.
+    : ${label:=arx} # Templated.
     tag="$label".`date -u +%FT%TZ`.$$
   fi
   echo "$tag"
@@ -136,7 +136,7 @@ tag() {
 
 case "${1:-}" in
   tmpx_create|tmpx_trap|envx|screend|cdx) set -eu
-                                              "$@" ;;
+                                          "$@" ;;
   tmpx) set -eu
         tmpx_create
         tmpx_trap "$@" ;;
@@ -154,5 +154,5 @@ esac
 
 # Just run command in a tmp directory cleaned up with a trap.
 #   tmpx_create
-#   tmpx_trap "$@"
+#   tmpx_trap "$dir" envx exec "$@"
 
