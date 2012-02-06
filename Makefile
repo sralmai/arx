@@ -34,6 +34,10 @@ Main=./dist/build/arx/arx-tmp/Main.hi \
 $(Main): ./docs/blessed/arx.txt
 	rm -f $@
 
+./tmp/sh/lib.bz: ./shell/lib
+	mkdir -p ./tmp/sh
+	./shell/compact < $< | bzip2 -9 > $@
+
 cabal: $(TMPXTools) $(Main)
 	cabal configure && cabal build
 
