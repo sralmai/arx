@@ -3,21 +3,31 @@
 module System.Posix.ARX.ShLib.Parser where
 
 import Control.Applicative
-import Data.ByteString.Char8
+import Data.ByteString.Char8 (ByteString)
+import qualified Data.ByteString.Char8
 
 import Text.Regex.TDFA ( Regex, RegexContext(matchM),
                          makeRegexOpts, defaultExecOpt,
                          blankCompOpt,  lastStarGreedy )
 
 
-{-| Kinds of lines, from the point of view of the template parser. 
+{-| Kinds of lines, from the point of view of the template parser.
  -}
 data Line                    =  FunctionOpen ByteString
                              |  FunctionClose
                              |  DefaultingVar ByteString
                              |  Body
+deriving instance Eq Line
 deriving instance Show Line
 
+data Function                =  Function ByteString [ByteString]
+deriving instance Eq Function
+deriving instance Ord Function
+deriving instance Show Function
+
+
+functions                   ::  ByteString -> [Function]
+functions                    =  foldr undefined undefined . scan
 
 scan                        ::  ByteString -> [(Line, ByteString)]
 scan s                       =  classify' <$> Data.ByteString.Char8.lines s
