@@ -19,6 +19,11 @@ data Line                    =  FunctionOpen ByteString
 deriving instance Show Line
 
 
+scan                        ::  ByteString -> [(Line, ByteString)]
+scan s                       =  classify' <$> Data.ByteString.Char8.lines s
+ where
+  classify' s                =  (classify s, s)
+
 {-| Classify line as a template line or as a plain, code line. The classifier
     marks function declarations and defaulting variables in a very simple
     manner: the function open and close must be on a line by themselves, as
