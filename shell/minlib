@@ -1,0 +1,14 @@
+#!/bin/sh
+# Minimal library that can be used by ARX... These functions are prepended to
+# every shell library.
+
+source_() {
+  [ ! -s "$1" ] || . "$1"
+  shift
+  "$@"
+}
+
+exec_() {
+  exec "$@"
+}
+

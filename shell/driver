@@ -1,0 +1,46 @@
+#!/bin/sh
+set -e -u
+go() {
+  : ${cwd:=cwd}
+  : ${rm0:=true}
+  : ${rm1:=true}
+  : ${tmp:=/tmp}
+  : ${tag:=arx}
+  tmp
+  preamble
+  mkdir -p "$cwd"
+  cd "$cwd"
+  archives
+  usercode "$@"
+}
+# Exec user code with environment by way of lib.
+usercode() {
+  "$d"/lib ... source_ "$d"/env exec_ { user argv } "$@"
+}
+# Create staging area and set a trap to ensure its removal.
+tmp() {
+  dir="$tmp"/"$tag".`date -u +%FT%TZ`.$$
+  mkdir -p "`dirname "$dir"`"
+  mkdir "$dir" # Fail if dir exists.
+  trap 'case $?/$rm0/$rm1 in
+          0/true/*)      rm -rf "$dir" ;;
+          [1-9]*/*/true) rm -rf "$dir" ;;
+        esac' EXIT
+  trap 'exit 2' HUP INT QUIT BUS SEGV PIPE TERM
+  cd "$dir"
+  dir="`pwd -P`" # Update directory with absolute path.
+}
+# Unpack any preamble material -- lib, env and run
+preamble() {
+  # { ...put SHDAT tarball here... } | tar xz
+}
+# Unpack user data archives.
+archives() {
+  # { ...put SHDAT tarball here... } | tar x
+  # { ...put SHDAT tarball here... } | tar xz
+  # { ...put SHDAT tarball here... } | tar xj
+  # { ...put SHDAT tarball here... } | tar xz
+  # { ...put SHDAT tarball here... } | tar x
+}
+go "$@" # Args are simply passed to the user's program.
+exit
