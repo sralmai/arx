@@ -1,6 +1,7 @@
 #!/bin/sh
-# Minimal library that can be used by ARX... These functions are prepended to
-# every shell library.
+# ARX requires that at least these shell functions are available in the shell
+# libary. They are prepended to every shell library (and thus can be
+# overridden).
 
 source_() {
   [ ! -s "$1" ] || . "$1"
