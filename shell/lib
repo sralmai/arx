@@ -36,36 +36,6 @@ screend() {
 }
 
 
-envx() {
-  [ ! -f ./env ] || . ./env
-  "$@"
-}
-
-
-tmpx_create() {
-  : ${tmp:=/tmp}  # Templated.
-  tag="`tag`"
-  dir="$tmp"/"$tag"
-  [ ! -e "$dir" ] || { echo 'ERR: tmp dir collision!' 1>&2 ; return 2 ;}
-  mkdir -p "$dir"
-  cd "$dir"
-}
-
-tmpx_trap() {
-  cd "$1" ; shift
-  : ${rm0:=true}  # Templated.
-  : ${rm0:=true}  # Templated.
-  : ${rm_:=true}  # Might be set by options but definitely not templated.
-  pwd="`pwd -P`"
-  trap 'case $?/$rm0/$rm1 in
-          0/true/*)      rm -rf "$pwd" ;;
-          [1-9]*/*/true) rm -rf "$pwd" ;;
-        esac' EXIT
-  trap 'exit 2' HUP INT QUIT BUS SEGV PIPE TERM
-  ( "$@" ) # We use a subshell to protect the trap and its environment.
-}
-
-
 # Log to files o and e in the present directory.
 files_oe() {
   "$@" 2>e 1>o
@@ -105,19 +75,6 @@ general_redirect() {
 }
 
 
-# Have to wrap cd so we can change the directory within the context of
-# external calls to the script. For example,
-#
-#  ./lib cdx <dir> files_oe
-#
-cdx() {
-  target_dir="$1"
-  shift
-  cd "$target_dir"
-  "$@"
-}
-
-
 # Generates a tag for this process from the label, the date up to seconds and
 # the PID. The tag is used to label screen sessions, temporary directories and
 # so forth. It is very unlikely the tag will collide with any other created
@@ -130,6 +87,18 @@ tag() {
     tag="$label".`date -u +%FT%TZ`.$$
   fi
   echo "$tag"
+}
+
+
+# Have to wrap cd so we can change the directory within the context of
+# external calls to the script. For example,
+#
+#  ./lib cd_ <dir> files_oe
+#
+cd_() {
+  cd "$1"
+  shift
+  "$@"
 }
 
 
