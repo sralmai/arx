@@ -75,16 +75,15 @@ general_redirect() {
 }
 
 
-# Generates a tag for this process from the label, the date up to seconds and
-# the PID. The tag is used to label screen sessions, temporary directories and
-# so forth. It is very unlikely the tag will collide with any other created
-# tag; but all commands that create resources, like screen_setup, should check
-# for a collision and fail if one is found.
+# Generates a tag for this process from the label and some random bytes.
+# Subcommands that need a unique resource -- for example, a screen label --
+# are very likely to get something unique this way; but they should always
+# check it and fail if (by chance) another process has already taken it.
 tag() {
   if [ ! -n "${tag:-}" ]
   then
-    : ${label:=arx} # Templated.
-    tag="$label".`date -u +%FT%TZ`.$$
+    : ${label:=arx}
+    tag="$label".`hexdump -n8 -e '"%08x-%08x"' < /dev/urandom`
   fi
   echo "$tag"
 }
