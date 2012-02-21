@@ -101,26 +101,5 @@ cd_() {
   "$@"
 }
 
-
-case "${1:-}" in
-  tmpx_create|tmpx_trap|envx|screend|cdx) set -eu
-                                          "$@" ;;
-  tmpx) set -eu
-        tmpx_create
-        tmpx_trap "$@" ;;
-  ?*)   echo 'Subcommand not found.' 1>&2 ; exit 2 ;;
-esac
-
-
-# Must mkdir and unpack tarballs before running screen.
-#   tmpx_create
-# Tar unpacking goes here.
-# However, must setup screen before setting trap. We actually have to call in
-# to lib again, in a new shell.
-#   screend ./lib tmpx_trap "$dir" envx exec "$@"
-
-
-# Just run command in a tmp directory cleaned up with a trap.
-#   tmpx_create
-#   tmpx_trap "$dir" envx exec "$@"
+"$@"
 
