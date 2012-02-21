@@ -5,8 +5,7 @@
 # generators, like `tag', allow variables to be shared.
 
 screen_S() {
-  tag="`tag`"
-  screen -S "$tag" "$@"
+  screen -S "`tag`" "$@"
 }
 
 # Initialize screen with settings. Settings are fed to screen's eval function,
@@ -27,12 +26,12 @@ screen_setup() {
 }
 
 # Launch command in initialized screen.
-screend() {
-  tag="`tag`"
+screen_() {
   screen_setup
   screen_S      -X screen 0 "$@"
   screen_S      -X eval 'select 1' kill
-  echo "$tag"
+  echo "New screen is:" 1>&2
+  echo "`tag`"
 }
 
 
