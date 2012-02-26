@@ -4,10 +4,7 @@ module System.Posix.ARX where
 import Data.ByteString (ByteString)
 
 
-data ARX                     =  ARX { run      :: [ByteString]
-                                      env      :: [(ByteString, ByteString)]
-                                      dir      :: Dir,
-                                      archives :: [(Archive, ByteStream)]    }
+data ARX                     =  ARX ExecV Env Archives
 deriving instance Eq ARX
 deriving instance Ord ARX
 deriving instance Show ARX
@@ -27,4 +24,6 @@ data Dir                     =  Fresh | Path ByteString
 deriving instance Eq Dir
 deriving instance Ord Dir
 deriving instance Show Dir
+
+type Archives = [(Dir, Archive, ByteStream)]
 
