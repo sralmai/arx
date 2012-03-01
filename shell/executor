@@ -10,8 +10,8 @@ phases() {
   unpack/archives
   screen/launch when screen?
   trap_tmp/level_2 when screen?
-  file_sources....
-  detach when detach?
+  file_sources....      # ┓ Can be reordered with respect to
+  detach when detach?   # ┛ one another.
   clear/env when clear/env?
   env
   lxc when lxc?
