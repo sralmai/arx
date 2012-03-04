@@ -1,34 +1,56 @@
 
 module System.Posix.ARX.Composer where
 
-import Data.ByteString
-
-{-| Some commands functions as wrappers for others, accepting a list of
-    arguments and calling them as a command. For the sake of this tool, these
-    wrappers are of two kinds: tools like screen, that use a variant of
-    @execv@, and shell functions that use @exec@ or a subshell, on the one
-    hand; and shell functions that simply execute the argument vector, fully
-    escaped, on the other. The latter are 'Inner' wrappers, the former 'Outer'
-    wrappers. For 'Inner' wrappers, commands that definitely must resolve to
-    paths are wrapped with @which@; for 'Outer' wrappers, 'ExecV' arrays are
-    prefixed with @./lib@ for library function commands or with @sh@ for
-    built-ins.
- -}
-data Wrapper                 =  Inner ExecV | Outer ExecV
-
+import Data.ByteString.Char8 (ByteString)
+import Data.String
 
 -- | An execution vector is a command and a list of arguments.
-data ExecV                   =  ExecV !CMD ![ByteString]
+data ExecV                   =  ExecV [TOK]
+ deriving (Eq, Show, Ord)
 
 
-{-| A command could be something that only functions as a built-in, for
-    example @set@, a shell function or alias dependent on the library being
-    sourced, an external command that should be resolved to a filesystem path,
-    or something ambivalent like @echo@ or @printf@ that can be a shell
-    built-in or can be resolved to a filesystem path.
- -}
-data CMD                     =  BuiltIn !ByteString  | Lib !ByteString
-                             |  External !ByteString | Ambivalent !ByteString
-instance IsString where
-  fromString                 =  Ambivalent . fromString
+-- | Commands and the contexts in which they can be executed:
+--
+-- *  An 'Sh' command is a shell built-in that needs to be executed in a shell
+--    context.
+--
+-- *  An 'External' command is an executable file, resolvable with @which@.
+--
+-- *  An 'Amb' command, like @echo@ or @true@, could be treated as a shell
+--    built-in or an external file, indifferently.
+--
+-- *  A 'Lib' command requires a certain shell library to be loaded.
+--
+--   When treated as wrappers, each command potentially changes the execution
+--   context; so we may need to insert explicit calls to @sh@ or the library.
+--   For example, a command like:
+-- @
+--    libfunc1 a b libfunc2 c d env x=y libfunc3
+-- @
+--   Needs to be rewritten to:
+-- @
+--    /lib/path libfunc1 -option libfunc2 --flag env x=y /lib/path libfunc3
+-- @
+--   The first call in to lib causes it be in-process when we make the second
+--   call; but then the call to @env@ puts in @/usr/bin/env@ so the library
+--   has to be reloaded for the third call to a library function.
+data CMD
+  = Sh { external :: Bool
+         -- ^ Some @sh@ built-ins, like @exec@, put us back in an external
+         --   context. This may apply to lib calls, as well.
+       }
+  | External
+  | Amb
+  | Lib { external :: Bool
+          -- ^ Some @sh@ built-ins, like @exec@, put us back in an external
+          --   context. This may apply to lib calls, as well.
+        , source :: ByteString }
+ deriving (Eq, Show, Ord)
+
+-- | A token in an execution vector is either a command (which we assume to be
+--   wrapped by commands further up the chain) or a simple string argument.
+data TOK                     =  CMD CMD ByteString | ARG ByteString
+ deriving (Eq, Show, Ord)
+instance IsString TOK where
+  fromString                 =  CMD Amb . fromString
 
