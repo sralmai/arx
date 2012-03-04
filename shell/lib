@@ -84,7 +84,7 @@ canonical_path() {
     d="`pwd -P`"
     echo "$d"/"`basename "$1"`"
   )
-# LOLziness -- the canonical path of '.' is always '/a/b/c/.'
+# LOLziness -- the canonical path of '.' is always '<something>/.'
 }
 
 
