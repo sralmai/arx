@@ -4,6 +4,7 @@ module System.Posix.ARX.Composer where
 import Data.ByteString.Char8 (ByteString)
 import Data.String
 
+
 -- | An execution vector is a command and a list of arguments.
 data ExecV                   =  ExecV [TOK]
  deriving (Eq, Show, Ord)
