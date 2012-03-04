@@ -18,7 +18,7 @@ screen_setup() {
   then
     tag="`tag`"
     ! { screen -ls | fgrep -q "$tag" ;} ||
-      { echo 'ERR: screen collision!' 1>&2 ; return 2 ;}
+      { err 'ERR: screen collision!' ; return 2 ;}
     ( cd / ; screen_S -dm -ln sleep 2 ) # Ensure PWD for screen is /.
     screen_setup=true
     screen_S      -X eval 'screen 1 sleep 1' 'select 0' kill "$@"
@@ -32,8 +32,8 @@ screen_() {
   screen_setup
   screen_S      -X screen 0 "$this_script" cd_ "`pwd -P`" "$@"
   screen_S      -X eval 'select 1' kill
-  echo "New screen is:" 1>&2
-  echo "`tag`"
+  err "New screen is:"
+  out "`tag`"
 }
 
 
@@ -82,7 +82,7 @@ general_redirect() {
 canonical_path() {
   ( cd "`dirname "$1"`"
     d="`pwd -P`"
-    echo "$d"/"`basename "$1"`"
+    out "$d"/"`basename "$1"`"
   )
 # LOLziness -- the canonical path of '.' is always '<something>/.'
 }
@@ -98,7 +98,7 @@ tag() {
     : ${label:=arx}
     tag="$label".`hexdump -n8 -e '"%08x-%08x"' < /dev/urandom`
   fi
-  echo "$tag"
+  out "$tag"
 }
 
 
@@ -111,6 +111,15 @@ cd_() {
   cd "$1"
   shift
   "$@"
+}
+
+
+err() {
+  echo "$@" 1>&2
+}
+
+out() {
+  echo "$@"
 }
 
 "$@"
