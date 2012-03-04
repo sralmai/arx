@@ -37,6 +37,21 @@ screen_() {
 }
 
 
+# Use curl to retrieve an archive, unpack it based on the type passed in, then
+# execute other commands.
+curl_archive() {
+  curl --connection-timeout 100 -L "$1" |
+  case "$2" in
+    tar) tar -x ;;
+    tgz) tar -xz ;;
+    tbz) tar -jz ;;
+    *)   err 'Unrecognized archive type token.' ;;
+  esac
+  shift ; shift
+  "$@"
+}
+
+
 # Log to files o and e in the present directory.
 files_oe() {
   "$@" 2>e 1>o
