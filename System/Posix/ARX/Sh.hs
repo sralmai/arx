@@ -19,8 +19,7 @@ import System.Posix.ARX.BlazeIsString
 setEU                       ::  Blaze.Builder
 setEU                        =  "set -e -u\n"
 
-{-| Valid shell string values contain any byte but null.
- -}
+-- | Valid shell string values contain any byte but null.
 newtype Val                  =  Val ByteString
  deriving (Eq, Ord, Show)
 instance Render Val where
@@ -31,9 +30,8 @@ instance Raw Val where
 val                         ::  ByteString -> Maybe Val
 val bytes = guard (Bytes.all (/= '\0') bytes) >> Just (Val bytes)
 
-{-| Valid shell variable names consist of a leading letter or underscore and
-    then any number of letters, underscores or digits.
- -}
+-- | Valid shell variable names consist of a leading letter or underscore and
+--   then any number of letters, underscores or digits.
 newtype Var                  =  Var ByteString
  deriving (Eq, Ord, Show)
 instance Render Var where
@@ -49,6 +47,7 @@ var bytes = guard (leading h && Bytes.all body t) >> Just (Var bytes)
   body c                     =  leading c || (c >= '0' && c <= '9')
   leading c = (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || c == '_'
 
+-- | Shell strings with variable substitution.
 newtype StringWithSubs       =  StringWithSubs [Either Var Val]
  deriving (Eq, Ord, Show)
 instance Render StringWithSubs where
