@@ -1,7 +1,6 @@
 {-# LANGUAGE OverloadedStrings
            , FlexibleInstances #-}
-{-| Utilities for working with shell script.
- -}
+-- | Very basic Bourne shell generation.
 module System.Posix.ARX.Sh ( Val(), val, Var(), var,
                              StringWithSubs(..),
                              setEU, Render(..), Raw(..) ) where
