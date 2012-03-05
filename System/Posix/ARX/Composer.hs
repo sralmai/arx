@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings
+           , PatternGuards #-}
 
 module System.Posix.ARX.Composer where
 
@@ -21,12 +23,9 @@ data ExecV                   =  ExecV [TOK]
 -- *  An 'Sh' command is a shell built-in that needs to be executed in a shell
 --    context.
 --
--- *  An 'External' command is an executable file, resolvable with @which@.
---
--- *  An 'Amb' command, like @echo@ or @true@, could be treated as a shell
---    built-in or an external file, indifferently.
---
 -- *  A 'Lib' command requires a certain shell library to be loaded.
+--
+-- *  An 'External' command is an executable file, resolvable with @which@.
 --
 --   When treated as wrappers, each command potentially changes the execution
 --   context; so we may need to insert explicit calls to @sh@ or the library.
@@ -47,12 +46,11 @@ data CMD
          -- ^ Some @sh@ built-ins, like @exec@, put us back in an external
          --   context. This may apply to lib calls, as well.
        }
-  | External
-  | Amb
   | Lib { external :: Bool
           -- ^ Some @sh@ built-ins, like @exec@, put us back in an external
           --   context. This may apply to lib calls, as well.
         , source :: Sh.VarVal }
+  | External
  deriving (Eq, Ord, Show)
 
 -- | A token in an execution vector is either a command (which we assume to be
@@ -63,5 +61,24 @@ data CMD
 data TOK                     =  CMD CMD Sh.VarVal | ARG Sh.VarVal
  deriving (Eq, Ord, Show)
 instance IsString TOK where
-  fromString = CMD Amb . Sh.VarVal . (:[]) . Right . fromString
+  fromString                 =  CMD External . fromString
+
+
+compile (ExecV tokens)       =  (reverse . snd) (foldr f (External, []) tokens)
+ where
+  f                         ::  TOK -> (CMD, [Sh.VarVal]) -> (CMD, [Sh.VarVal])
+  f (ARG arg) (t, args)      =  (t, arg:args)
+  f (CMD t arg) (t', args)   =  (t, args')
+   where
+    ba:ck:to:sh:[]           =  ["/bin/sh","-c","\"$@\"","sh"]
+    args' = case t of
+      Sh _ | Sh False <- t'               -> arg:args
+           | otherwise                    -> ba:ck:to:sh:arg:args
+      Lib _ x | Sh False <- t'            -> "exec":x:arg:args
+              | Lib False y <- t', x /= y -> "exec":x:arg:args
+              | Lib False y <- t', x == y -> arg:args
+              | otherwise                 -> arg:args
+      External | Sh False <- t'           -> "exec":arg:args
+               | Lib False _ <- t'        -> "exec":arg:args
+               | otherwise                -> arg:args
 

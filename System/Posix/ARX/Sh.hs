@@ -58,6 +58,8 @@ newtype VarVal               =  VarVal [Either Var Val]
  deriving (Eq, Ord, Show)
 instance Render VarVal where
   render (VarVal l)          =  (mconcat . map render) l
+instance IsString VarVal where
+  fromString                 =  VarVal . (:[]) . Right . fromString
 
 
 instance Render (Either Var Val) where
