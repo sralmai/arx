@@ -7,7 +7,11 @@ import Data.String
 import System.Posix.ARX.Sh
 
 
--- | An execution vector is a command and a list of arguments.
+-- | An execution vector is a command and a list of arguments. Some of the
+--   arguments may in fact be other commands; the implication is that the
+--   vector is a sequence of wrappers, performing set up and calling the next
+--   command with the remaining arguments. Programming with wrappers is a
+--   kind of stack-based programming.
 data ExecV                   =  ExecV [TOK]
  deriving (Eq, Ord, Show)
 
