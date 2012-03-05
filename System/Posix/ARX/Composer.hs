@@ -57,6 +57,9 @@ data CMD
 
 -- | A token in an execution vector is either a command (which we assume to be
 --   wrapped by commands further up the chain) or a simple string argument.
+--   From a stack programming point of view, an 'ARG' is an instruction to put
+--   something on the stack while a 'CMD' performs some task and may take
+--   arguments off the stack.
 data TOK                     =  CMD CMD ByteString | ARG ByteString
  deriving (Eq, Ord, Show)
 instance IsString TOK where
