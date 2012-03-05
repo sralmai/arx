@@ -70,7 +70,7 @@ compile (ExecV tokens)       =  (reverse . snd) (foldr f (External, []) tokens)
   f (ARG arg) (t, args)      =  (t, arg:args)
   f (CMD t arg) (t', args)   =  (t, args')
    where
-    ba:ck:to:sh:[]           =  ["/bin/sh","-c","\"$@\"","sh"]
+    ba:ck:to:sh:[]           =  "/bin/sh":"-c":"\"$@\"":"sh":[]
     args' = case t of
       Sh _ | Sh False <- t'               -> arg:args
            | otherwise                    -> ba:ck:to:sh:arg:args
