@@ -49,6 +49,15 @@ var bytes = guard (leading h && Bytes.all body t) >> Just (Var bytes)
   body c                     =  leading c || (c >= '0' && c <= '9')
   leading c = (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || c == '_'
 
+newtype StringWithSubs       =  StringWithSubs [Either Var Val]
+ deriving (Eq, Ord, Show)
+instance Render StringWithSubs where
+  render (StringWithSubs l)  =  (mconcat . map render) l
+
+instance Render (Either Var Val) where
+  render (Left var)          =  mconcat ["\"$", render var, "\""]
+  render (Right val)         =  render val
+
 instance Render [Val] where
   render                     =  mconcat . map (mappend " " . render)
 
