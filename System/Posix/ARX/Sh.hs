@@ -49,12 +49,6 @@ var bytes = guard (leading h && Bytes.all body t) >> Just (Var bytes)
   body c                     =  leading c || (c >= '0' && c <= '9')
   leading c = (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || c == '_'
 
-instance Render [(Var, Val)] where
-  render [       ]           =  mempty
-  render ((k,v):t)           =  exportStatement `mappend` render t
-   where
-    exportStatement = mconcat ["export ", render k, "=", render v, "\n"]
-
 instance Render [Val] where
   render                     =  mconcat . map (mappend " " . render)
 
