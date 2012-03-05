@@ -7,7 +7,7 @@ import Data.String
 
 -- | An execution vector is a command and a list of arguments.
 data ExecV                   =  ExecV [TOK]
- deriving (Eq, Show, Ord)
+ deriving (Eq, Ord, Show)
 
 
 -- | Commands and the contexts in which they can be executed:
@@ -46,12 +46,12 @@ data CMD
           -- ^ Some @sh@ built-ins, like @exec@, put us back in an external
           --   context. This may apply to lib calls, as well.
         , source :: ByteString }
- deriving (Eq, Show, Ord)
+ deriving (Eq, Ord, Show)
 
 -- | A token in an execution vector is either a command (which we assume to be
 --   wrapped by commands further up the chain) or a simple string argument.
 data TOK                     =  CMD CMD ByteString | ARG ByteString
- deriving (Eq, Show, Ord)
+ deriving (Eq, Ord, Show)
 instance IsString TOK where
   fromString                 =  CMD Amb . fromString
 

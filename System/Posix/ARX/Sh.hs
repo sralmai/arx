@@ -1,6 +1,5 @@
 {-# LANGUAGE OverloadedStrings
-           , FlexibleInstances
-           , StandaloneDeriving #-}
+           , FlexibleInstances #-}
 {-| Utilities for working with shell script.
  -}
 module System.Posix.ARX.Sh ( Val(), val, Var(), var,
@@ -23,9 +22,7 @@ setEU                        =  "set -e -u\n"
 {-| Valid shell string values contain any byte but null.
  -}
 newtype Val                  =  Val ByteString
-deriving instance Eq Val
-deriving instance Ord Val
-deriving instance Show Val
+ deriving (Eq, Ord, Show)
 instance Render Val where
   render (Val bytes) = (Blaze.fromByteString . Esc.bytes . Esc.sh) bytes
 instance Raw Val where
@@ -38,9 +35,7 @@ val bytes = guard (Bytes.all (/= '\0') bytes) >> Just (Val bytes)
     then any number of letters, underscores or digits.
  -}
 newtype Var                  =  Var ByteString
-deriving instance Eq Var
-deriving instance Ord Var
-deriving instance Show Var
+ deriving (Eq, Ord, Show)
 instance Render Var where
   render (Var bytes)         =  Blaze.fromByteString bytes
 instance Raw Var where
