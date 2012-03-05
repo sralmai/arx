@@ -3,6 +3,7 @@
 {-| Utilities for working with shell script.
  -}
 module System.Posix.ARX.Sh ( Val(), val, Var(), var,
+                             StringWithSubs(..),
                              setEU, Render(..), Raw(..) ) where
 
 import Control.Monad

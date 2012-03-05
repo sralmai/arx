@@ -4,6 +4,8 @@ module System.Posix.ARX.Composer where
 import Data.ByteString.Char8 (ByteString)
 import Data.String
 
+import System.Posix.ARX.Sh
+
 
 -- | An execution vector is a command and a list of arguments.
 data ExecV                   =  ExecV [TOK]
@@ -45,7 +47,7 @@ data CMD
   | Lib { external :: Bool
           -- ^ Some @sh@ built-ins, like @exec@, put us back in an external
           --   context. This may apply to lib calls, as well.
-        , source :: ByteString }
+        , source :: StringWithSubs }
  deriving (Eq, Ord, Show)
 
 -- | A token in an execution vector is either a command (which we assume to be
