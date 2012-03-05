@@ -35,8 +35,9 @@ data ExecV                   =  ExecV [TOK]
 --    /lib/path libfunc1 -option libfunc2 --flag env x=y /lib/path libfunc3
 -- @
 --   The first call in to lib causes it be in-process when we make the second
---   call; but then the call to @env@ puts in @/usr/bin/env@ so the library
---   has to be reloaded for the third call to a library function.
+--   call; but then the call to @env@ transfers control to a process where
+--   @/usr/bin/env@ is in core so a shell must be started and the library
+--   reloaded for the third call to a library function.
 data CMD
   = Sh { external :: Bool
          -- ^ Some @sh@ built-ins, like @exec@, put us back in an external
