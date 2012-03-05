@@ -4,7 +4,7 @@ module System.Posix.ARX.Composer where
 import Data.ByteString.Char8 (ByteString)
 import Data.String
 
-import System.Posix.ARX.Sh
+import qualified System.Posix.ARX.Sh as Sh
 
 
 -- | An execution vector is a command and a list of arguments. Some of the
@@ -52,7 +52,7 @@ data CMD
   | Lib { external :: Bool
           -- ^ Some @sh@ built-ins, like @exec@, put us back in an external
           --   context. This may apply to lib calls, as well.
-        , source :: StringWithSubs }
+        , source :: Sh.VarVal }
  deriving (Eq, Ord, Show)
 
 -- | A token in an execution vector is either a command (which we assume to be
@@ -60,8 +60,8 @@ data CMD
 --   From a stack programming point of view, an 'ARG' is an instruction to put
 --   something on the stack while a 'CMD' performs some task and may take
 --   arguments off the stack.
-data TOK                     =  CMD CMD ByteString | ARG ByteString
+data TOK                     =  CMD CMD Sh.VarVal | ARG Sh.VarVal
  deriving (Eq, Ord, Show)
 instance IsString TOK where
-  fromString                 =  CMD Amb . fromString
+  fromString = CMD Amb . Sh.VarVal . (:[]) . Right . fromString
 
