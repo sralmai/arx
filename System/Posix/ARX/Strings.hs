@@ -25,6 +25,13 @@ instance Norm Env          where norm b | elem '=' c = Env c
                                         | otherwise  = Env (snoc c '=')
                                   where CString c = norm b
 
+-- | A filename is a C string not containing @\/@.
+newtype Filename = Filename ByteString deriving (Eq, Ord, Show, Monoid)
+instance IsString Filename where fromString = fromString'
+instance Bytes Filename    where bytes (Filename s) = s
+instance Norm Filename     where norm = Filename . takeWhile condition
+                                  where condition = not . (`elem` "/\0")
+
 class Norm t              where norm :: ByteString -> t
 
 class Bytes t             where bytes :: t -> ByteString
@@ -33,5 +40,6 @@ maybeNorm                   ::  (Bytes t, Norm t) => ByteString -> Maybe t
 maybeNorm b                  =  guard (bytes normed == b) >> Just normed
  where normed                =  norm b
 
+fromString'                 ::  (Bytes t, Norm t) => String -> t
 fromString'                  =  fromJust . maybeNorm . fromString
 
