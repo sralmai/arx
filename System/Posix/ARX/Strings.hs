@@ -6,7 +6,7 @@ import Control.Monad
 import Data.ByteString.Char8
 import Data.Maybe
 import Data.Monoid
-import Prelude hiding (elem, takeWhile)
+import Prelude hiding (elem, takeWhile, null)
 import Data.String
 
 
@@ -25,12 +25,22 @@ instance Norm Env          where norm b | elem '=' c = Env c
                                         | otherwise  = Env (snoc c '=')
                                   where CString c = norm b
 
--- | A filename is a C string not containing @\/@.
-newtype Filename = Filename ByteString deriving (Eq, Ord, Show, Monoid)
-instance IsString Filename where fromString = fromJust . maybeFromString
+-- | A filename is a non-empty C string not containing @\/@.
+newtype Filename = Filename ByteString deriving (Eq, Ord, Show)
+instance IsString Filename where fromString = fromJust . filename . fromString
 instance Bytes Filename    where bytes (Filename s) = s
-instance Norm Filename     where norm = Filename . takeWhile condition
-                                  where condition = not . (`elem` "/\0")
+
+filename  :: ByteString -> Maybe Filename
+filename b | null b || elem '\0' b || elem '/' b = Nothing
+           | otherwise                           = Just (Filename b)
+
+
+-- | A UNIX path is a non-empty C string.
+newtype Path = Path ByteString deriving (Eq, Ord, Show)
+instance IsString Path where fromString = fromJust . maybeFromString
+instance Bytes Path    where bytes (Path s) = s
+instance Norm Path     where norm b = if "" == c then Path "." else Path c
+                              where CString c = norm b
 
 class Norm t              where norm :: ByteString -> t
 

@@ -2,10 +2,10 @@
 module System.Posix.ARX where
 
 import qualified Data.ByteString.Lazy
+import Data.Monoid
 
 import System.Posix.ARX.Composer
-import System.Posix.ARX.Strings( CString(), Env(), Filename(),
-                                 Bytes(..), Norm(..), maybeNorm )
+import System.Posix.ARX.Strings(CString(), Env(), Filename(), Path())
 import System.Posix.ARX.URL
 
 -- | A task to run on a @UNIX@ system. The task specification combines:
@@ -17,13 +17,25 @@ import System.Posix.ARX.URL
 -- * a directory to change to,
 --
 -- * files to place in that directory (or in dirs relative to it).
-data Task
-  = Task { cmd   :: (CString, [CString]) -- ^ Command and its arguments.
-         , env   :: [Env] -- ^ Environment mapping strings.
-         , dir   :: CString -- ^ Desired working directory.
-         , files :: [(CString, FileSource)] -- ^ File sources.
-         }
+--
+--   Collectively, these attributes capture much of what makes a running
+--   @UNIX@ app what it is -- its code, configuration and environment.
+data Task = Task { cmd   :: (Path, [CString]) -- ^ Command and arguments.
+                 , env   :: [Env]             -- ^ Environment mapping strings.
+                 , dir   :: Path              -- ^ Desired working directory.
+                 , files :: Files             -- ^ Files to place before run.
+                 }
  deriving (Eq, Ord, Show)
+
+-- | A files spec combines files sources and directory paths, which are
+--   interpreted relative to the task's working directory. The sources are
+--   unpacked in order, with later sources overriding files laid down by
+--   earlier ones if there is any conflict. File specs form a monoid, where
+--   simple concatenation is the associative operation, since unpacking one
+--   set of sources and then the other is just the same as unpacking all the
+--   sources in order.
+newtype Files = Files [(Path, FileSource)]
+ deriving (Eq, Ord, Show, Monoid)
 
 -- | A file source is a literal file archive annotated with its archive type;
 --   or a URL which indicates a checkout via Git, a download via Curl or some
@@ -35,7 +47,7 @@ data FileSource
   | URL URL
  deriving (Eq, Ord, Show)
 
--- | Support archives.
-data ArchiveType             =  Tar | TBZ | TGZ
+-- | Supported archives.
+data ArchiveType = Tar | TBZ | TGZ
  deriving (Eq, Ord, Show)
 
