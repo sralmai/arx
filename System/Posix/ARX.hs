@@ -20,9 +20,9 @@ import System.Posix.ARX.URL
 --
 --   Collectively, these attributes capture much of what makes a running
 --   @UNIX@ app what it is -- its code, configuration and environment.
-data Task = Task { cmd :: (Path, [CString])
-                 , env :: [Env]
-                 , dir  :: Path
+data Task = Task { cmd   :: (Path, [CString])
+                 , env   :: [Env]
+                 , dir   :: Path
                  , files :: Files }
  deriving (Eq, Ord, Show)
 
