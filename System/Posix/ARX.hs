@@ -20,11 +20,10 @@ import System.Posix.ARX.URL
 --
 --   Collectively, these attributes capture much of what makes a running
 --   @UNIX@ app what it is -- its code, configuration and environment.
-data Task = Task { cmd   :: (Path, [CString]) -- ^ Command and arguments.
-                 , env   :: [Env]             -- ^ Environment mapping strings.
-                 , dir   :: Path              -- ^ Desired working directory.
-                 , files :: Files             -- ^ Files to place before run.
-                 }
+data Task = Task { cmd :: (Path, [CString])
+                 , env :: [Env]
+                 , dir  :: Path
+                 , files :: Files }
  deriving (Eq, Ord, Show)
 
 -- | A files spec combines files sources and directory paths, which are
