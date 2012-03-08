@@ -1,7 +1,7 @@
 
 module System.Posix.ARX where
 
-import qualified Data.ByteString.Lazy
+import Data.ByteString.Lazy (ByteString)
 import Data.Monoid
 
 import System.Posix.ARX.Composer
@@ -41,7 +41,8 @@ newtype Files = Files [(Path, FileSource)]
 --   other extended mechanism for getting files.
 data FileSource
   -- | A file archive and a hint for how to decode it.
-  = Archive ArchiveType Data.ByteString.Lazy.ByteString
+  = Archive CString -- ^ A short hint like @tar@, @tgz@, @tbz@...
+            ByteString -- ^ Archive binary data.
   -- | A URL indicating a source for files via a particular transport.
   | URL URL
  deriving (Eq, Ord, Show)
