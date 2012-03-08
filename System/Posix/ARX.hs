@@ -41,7 +41,7 @@ newtype Files = Files [(Path, FileSource)]
 --   other extended mechanism for getting files.
 data FileSource
   -- | A file archive and a hint for how to decode it.
-  = Archive CString -- ^ A short hint like @tar@, @tgz@, @tbz@...
+  = Archive CString    -- ^ A short hint like @tar@, @tgz@ or @tbz@.
             ByteString -- ^ Archive binary data.
   -- | A URL indicating a source for files via a particular transport.
   | URL URL
