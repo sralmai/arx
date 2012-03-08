@@ -47,7 +47,3 @@ data FileSource
   | URL URL
  deriving (Eq, Ord, Show)
 
--- | Supported archives.
-data ArchiveType = Tar | TBZ | TGZ
- deriving (Eq, Ord, Show)
-
