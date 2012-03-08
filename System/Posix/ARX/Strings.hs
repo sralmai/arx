@@ -25,14 +25,14 @@ instance Norm Env          where norm b | elem '=' c = Env c
                                         | otherwise  = Env (snoc c '=')
                                   where CString c = norm b
 
--- | A filename is a non-empty C string not containing @\/@.
-newtype Filename = Filename ByteString deriving (Eq, Ord, Show)
-instance IsString Filename where fromString = fromJust . filename . fromString
-instance Bytes Filename    where bytes (Filename s) = s
+-- | A path segment is a non-empty C string not containing @\/@.
+newtype PathSegment = PathSegment ByteString deriving (Eq, Ord, Show)
+instance IsString PathSegment where fromString = fromJust . pathSeg. fromString
+instance Bytes PathSegment    where bytes (PathSegment s) = s
 
-filename  :: ByteString -> Maybe Filename
-filename b | null b || elem '\0' b || elem '/' b = Nothing
-           | otherwise                           = Just (Filename b)
+pathSeg :: ByteString -> Maybe PathSegment
+pathSeg b  |  null b || elem '\0' b || elem '/' b  =  Nothing
+           |  otherwise                            =  Just (PathSegment b)
 
 
 -- | A UNIX path is a non-empty C string.

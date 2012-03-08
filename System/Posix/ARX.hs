@@ -5,7 +5,7 @@ import Data.ByteString.Lazy (ByteString)
 import Data.Monoid
 
 import System.Posix.ARX.Composer
-import System.Posix.ARX.Strings(CString(), Env(), Filename(), Path())
+import System.Posix.ARX.Strings(CString(), Env(), PathSegment(), Path())
 import System.Posix.ARX.URL
 
 
@@ -47,4 +47,18 @@ data FileSource
   -- | A URL indicating a source for files via a particular transport.
   | URL URL
  deriving (Eq, Ord, Show)
+
+
+-- | The 'Executor' encapsulates all the "vendor specific" nonsense in @ARX@.
+--   It's where we find all the "ARXiness". Once a task has been specified,
+--   it's up the executor how we handle space allocation, timeouts,
+--   daemonization and other matters.
+data Executor = Executor { timeout :: Maybe Word32,
+                           background :: Maybe Background,
+                           redirect :: Maybe Redirect,
+                           lxc :: Maybe LXC }
+
+data Background = Screen  -- TODO: add  | TMUX | NoHUP
+data LXC = LXC -- TODO: Set options.
+data Redirect = Syslog
 
