@@ -41,10 +41,11 @@ newtype Files = Files [(Path, FileSource)]
 --   or a URL which indicates a checkout via Git, a download via Curl or some
 --   other extended mechanism for getting files.
 data FileSource
-  -- | A file archive and a hint for how to decode it.
-  = Archive CString    -- ^ A short hint like @tar@, @tgz@ or @tbz@.
-            ByteString -- ^ Binary archive data.
-  -- | A URL indicating a source for files via a particular transport.
+  -- | A file archive. For @tar@, @tbz@ and @tgz@, the archive type is
+  --   automatically detected by @ARX@.
+  = Archive ByteString
+  -- | A URL indicating a source for files via @git@, over @HTTP@ or other,
+  --   extended mechanisms.
   | URL URL
  deriving (Eq, Ord, Show)
 

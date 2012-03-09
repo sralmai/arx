@@ -42,6 +42,59 @@ instance Bytes Path    where bytes (Path s) = s
 instance Norm Path     where norm b = if "" == c then Path "." else Path c
                               where CString c = norm b
 
+-- | Names conforming to the "letter-digit-hyphen" rule commonly followed in
+--   DNS naming. See <http://tools.ietf.org/html/rfc3467#page-3>. This
+--   restricted subset of characters meshes well with restrictions imposed by
+--   syslog, email systems, DOS filesystems, unquoted strings in YAML,
+--   and variable names in many programming languages (espcially with case
+--   normalization and allow substituting @_@ for @-@). The rules followed in
+--   this implementation are drawn from RFC 1035.
+newtype LDHName = LDHName ByteString deriving (Eq, Ord, Show)
+{-
+
+The following syntax will result in fewer problems with many
+applications that use domain names (e.g., mail, TELNET).
+
+<domain> ::= <subdomain> | " "
+
+<subdomain> ::= <label> | <subdomain> "." <label>
+
+<label> ::= <letter> [ [ <ldh-str> ] <let-dig> ]
+
+<ldh-str> ::= <let-dig-hyp> | <let-dig-hyp> <ldh-str>
+
+<let-dig-hyp> ::= <let-dig> | "-"
+
+<let-dig> ::= <letter> | <digit>
+
+<letter> ::= any one of the 52 alphabetic characters A through Z in
+upper case and a through z in lower case
+
+<digit> ::= any one of the ten digits 0 through 9
+
+Note that while upper and lower case letters are allowed in domain
+names, no significance is attached to the case.  That is, two names with
+the same spelling but different case are to be treated as if identical.
+
+The labels must follow the rules for ARPANET host names.  They must
+start with a letter, end with a letter or digit, and have as interior
+characters only letters, digits, and hyphen.  There are also some
+restrictions on the length.  Labels must be 63 characters or less.
+
+...
+
+Various objects and parameters in the DNS have size limits.  They are
+listed below.  Some could be easily changed, others are more
+fundamental.
+
+labels          63 octets or less
+
+names           255 octets or less
+
+ -- http://tools.ietf.org/html/rfc1035
+
+ -}
+
 class Norm t  where norm  :: ByteString -> t
 class Bytes t where bytes :: t -> ByteString
 
