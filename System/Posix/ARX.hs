@@ -3,9 +3,11 @@ module System.Posix.ARX where
 
 import Data.ByteString.Lazy (ByteString)
 import Data.Monoid
+import Data.Word
 
 import System.Posix.ARX.Composer
-import System.Posix.ARX.Strings(CString(), Env(), PathSegment(), Path())
+import System.Posix.ARX.Strings(CString(), Env(), Path())
+import System.Posix.ARX.LDHName(LDHName())
 import System.Posix.ARX.URL
 
 
@@ -50,16 +52,30 @@ data FileSource
  deriving (Eq, Ord, Show)
 
 
--- | The 'Executor' encapsulates all the "vendor specific" nonsense in @ARX@.
---   It's where we find all the "ARXiness". Once a task has been specified,
---   it's up the executor how we handle space allocation, timeouts,
---   daemonization and other matters.
-data Executor = Executor { timeout :: Maybe Word32,
-                           background :: Maybe Background,
-                           redirect :: Maybe Redirect,
-                           lxc :: Maybe LXC }
+-- | The 'Executor' unpacks and runs a 'Task'. In @ARX@, the executor is a
+--   shell script with the task compiled in to it. As a first step, the
+--   script always creates a temporary directory to unpack its libraries; by
+--   default, the task is executed in an empty directory below this directory.
+--   The executor can also daemonize the task behind a screen and redirect its
+--   output to syslog. Traits of how we run a task that are disctinct from
+--   what to run -- for example, containerization, 
+data Executor = Executor
+  { tag :: LDHName -- ^ A short prefix used for screens, temporary directories
+                   --   and other resources allocated by @ARX@. The default
+                   --   is @arx@. The names are constrained by the
+                   --   'letter-digit-hypen' rule common to DNS.
+  , tmp :: Path -- ^ The directory where temporary directories are allocated.
+                --   The default is @/tmp@.
+  , redirect :: Maybe Redirect -- ^ Redirection of @STDERR@ and @STDOUT@. The
+                               --   default is not to redirect.
+  , detach :: Maybe Detach -- ^ Make it possible for the process to run with
+                           --   the terminal detached (for example, with
+                           --   screen or tmux). The default is not to detach.
+  }
+-- | Executor with defaults set.
+executor = Executor { tag="arx", tmp="/tmp", redirect=Nothing, detach=Nothing }
 
-data Background = Screen  -- TODO: add  | TMUX | NoHUP
-data LXC = LXC -- TODO: Set options.
+data Detach = Screen  -- TODO: add  | TMUX | NoHUP
+-- TODO: data LXC = LXC ...
 data Redirect = Syslog
 
