@@ -16,8 +16,11 @@ import Data.String
 import System.Posix.ARX.RE
 
 
--- ^ The productions and guidelines for a "prudent" subset of domain names as
---   given in <http://tools.ietf.org/html/rfc1035>:
+newtype LDHName = LDHName ByteString deriving (Eq, Ord, Show)
+instance IsString LDHName where fromString = fromJust . ldh . fromString
+
+-- ^ Recognizer for LDH names. The productions and guidelines for a "prudent"
+--   subset of domain names as given in <http://tools.ietf.org/html/rfc1035>:
 --
 -- > The following syntax will result in fewer problems with many
 -- > applications that use domain names (e.g., mail, TELNET).
@@ -64,16 +67,12 @@ import System.Posix.ARX.RE
 --   allocated to the domain name, including, presumably, a final @.@ and
 --   @NUL@.
 --
---   We vary from these guidelines in one respect -- we require non-empty
---   names.
-newtype LDHName = LDHName ByteString deriving (Eq, Ord, Show)
-instance IsString LDHName where fromString = fromJust . ldh . fromString
-
+--   We vary from the RFC by requiring non-empty names.
 ldh  :: ByteString -> Maybe LDHName
-ldh b = (name =~ b) >> guard (length b <= 253) >> Just (LDHName b)
- where
-  name = "^[a-zA-Z]([a-zA-Z0-9-]{0,62}[a-zA-Z0-9])?\
-      \([.][a-zA-Z]([a-zA-Z0-9-]{0,62}[a-zA-Z0-9])?){0,126}$"
+ldh b = (ldhRE =~ b) >> guard (length b <= 253) >> Just (LDHName b)
+
+ldhRE = "^[a-zA-Z]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\
+     \([.][a-zA-Z]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?){0,126}$"
   -- Haskell string line continuations are stupid. Neither backslash makes
   -- it's way through to the regular expression; you can ignore them.
 
