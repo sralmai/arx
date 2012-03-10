@@ -1,6 +1,6 @@
--- | URL "...refers to the subset of URIs that, in addition to identifying a
+-- | URL \"...refers to the subset of URIs that, in addition to identifying a
 --   resource, provide a means of locating the resource by describing its
---   primary access mechanism".
+--   primary access mechanism\".
 --   http://tools.ietf.org/html/rfc3986
 module System.Posix.ARX.URL where
 
