@@ -1,4 +1,5 @@
-
+{-# LANGUAGE OverloadedStrings
+           , GeneralizedNewtypeDeriving #-}
 module System.Posix.ARX where
 
 import Data.ByteString.Lazy (ByteString)

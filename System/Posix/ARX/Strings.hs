@@ -25,16 +25,6 @@ instance Norm Env          where norm b | elem '=' c = Env c
                                         | otherwise  = Env (snoc c '=')
                                   where CString c = norm b
 
--- | A path segment is a non-empty C string not containing @\/@.
-newtype PathSeg = PathSeg ByteString deriving (Eq, Ord, Show)
-instance IsString PathSeg where fromString = fromJust . pathSeg. fromString
-instance Bytes PathSeg    where bytes (PathSeg s) = s
-
-pathSeg :: ByteString -> Maybe PathSeg
-pathSeg b  |  null b || elem '\0' b || elem '/' b  =  Nothing
-           |  otherwise                            =  Just (PathSeg b)
-
-
 -- | A UNIX path is a non-empty C string.
 newtype Path = Path ByteString deriving (Eq, Ord, Show)
 instance IsString Path where fromString = fromJust . maybeFromString
