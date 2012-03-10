@@ -55,11 +55,12 @@ data FileSource
 
 -- | The 'Executor' unpacks and runs a 'Task'. In @ARX@, the executor is a
 --   shell script with the task compiled in to it. As a first step, the
---   script always creates a temporary directory to unpack its libraries; by
---   default, the task is executed in an empty directory below this directory.
---   The executor can also daemonize the task behind a screen and redirect its
---   output to syslog. Traits of how we run a task that are disctinct from
---   what to run -- for example, containerization, 
+--   script always creates a temporary directory to unpack its libraries; a
+--   task with a directory set to @.@ will execute in this temporary
+--   directory. Everything "opinionated" about @ARX@ -- and everything that
+--   represents an extension to the basic model of a reproducible process
+--   hierarchy with files and environment variables -- is captured by the
+--   'Executor' data structure.
 data Executor = Executor
   { tag :: LDHName -- ^ A short prefix used for screens, temporary directories
                    --   and other resources allocated by @ARX@. The default
@@ -71,7 +72,7 @@ data Executor = Executor
                                --   default is not to redirect.
   , detach :: Maybe Detach -- ^ Make it possible for the process to run with
                            --   the terminal detached (for example, with
-                           --   screen or tmux). The default is not to detach.
+                           --   screen). The default is not to detach.
   }
 -- | Executor with defaults set.
 executor = Executor { tag="arx", tmp="/tmp", redirect=Nothing, detach=Nothing }
