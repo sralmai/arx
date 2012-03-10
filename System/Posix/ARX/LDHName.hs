@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
--- | Names conforming to the "letter-digit-hyphen" rule commonly followed in
+-- | Names conforming to the \"letter-digit-hyphen\" rule commonly followed in
 --   DNS naming. This restricted subset of characters meshes well with
 --   restrictions imposed by syslog, email systems, DOS filesystems,
 --   serialization formats and variable naming conventions in many

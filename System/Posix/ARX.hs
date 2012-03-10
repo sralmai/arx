@@ -57,7 +57,7 @@ data FileSource
 --   shell script with the task compiled in to it. As a first step, the
 --   script always creates a temporary directory to unpack its libraries; a
 --   task with a directory set to @.@ will execute in this temporary
---   directory. Everything "opinionated" about @ARX@ -- and everything that
+--   directory. Everything opinionated about @ARX@ -- everything that
 --   represents an extension to the basic model of a reproducible process
 --   hierarchy with files and environment variables -- is captured by the
 --   'Executor' data structure.
@@ -65,7 +65,7 @@ data Executor = Executor
   { tag :: LDHName -- ^ A short prefix used for screens, temporary directories
                    --   and other resources allocated by @ARX@. The default
                    --   is @arx@. The names are constrained by the
-                   --   'letter-digit-hypen' rule common to DNS.
+                   --   letter-digit-hypen rule common to DNS.
   , tmp :: Path -- ^ The directory where temporary directories are allocated.
                 --   The default is @/tmp@.
   , redirect :: Maybe Redirect -- ^ Redirection of @STDERR@ and @STDOUT@. The

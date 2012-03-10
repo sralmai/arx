@@ -30,13 +30,13 @@ data ExecV                   =  ExecV [TOK]
 --   When treated as wrappers, each command potentially changes the execution
 --   context; so we may need to insert explicit calls to @sh@ or the library.
 --   For example, a command like:
--- @
---    libfunc1 a b libfunc2 c d env x=y libfunc3
--- @
+--
+-- >  libfunc1 a b libfunc2 c d env x=y libfunc3
+--
 --   Needs to be rewritten to:
--- @
---    /lib/path libfunc1 -option libfunc2 --flag env x=y /lib/path libfunc3
--- @
+--
+-- >  /lib/path libfunc1 -option libfunc2 --flag env x=y /lib/path libfunc3
+--
 --   The first call in to lib causes it be in-process when we make the second
 --   call; but then the call to @env@ transfers control to a process where
 --   @/usr/bin/env@ is in core so a shell must be started and the library
