@@ -35,6 +35,7 @@ instance Norm Path     where norm b = if "" == c then Path "." else Path c
                               where CString c = norm b
 
 class Norm t  where norm  :: ByteString -> t
+class Bytes t where bytes :: t -> ByteString
 
 maybeNorm                   ::  (Bytes t, Norm t) => ByteString -> Maybe t
 maybeNorm b                  =  guard (bytes normed == b) >> Just normed

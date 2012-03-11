@@ -3,6 +3,7 @@ module System.Posix.ARX.URL where
 
 import Control.Applicative
 import Control.Monad
+import Data.Bits
 import Data.ByteString hiding (takeWhile, take)
 import Data.Either
 import Data.Monoid
@@ -79,13 +80,13 @@ instance Parse Authority where parser  =  Authority
 --     identifiers using that scheme.\"
 -- >  scheme      = ALPHA *( ALPHA / DIGIT / "+" / "-" / "." )
 newtype Scheme = Scheme ByteString deriving (Eq, Ord, Show)
-instance Bytes Scheme where bytes (Scheme b) = b
+instance Encode Scheme where encode (Scheme b) = b
 instance Parse Scheme where parser  =  (Scheme .) . cons
                                    <$> satisfy (inClass "a-zA-Z")
                                    <*> takeWhile (inClass "a-zA-Z0-9.+-")
 
 class Parse t where parser :: Parser t
-class Bytes t where bytes :: t -> ByteString
+class Encode t where encode :: t -> ByteString
 
 -- | > *( unreserved / pct-encoded / sub-delims / ":" )
 userinfoOctet :: Word8 -> Bool
@@ -166,4 +167,30 @@ pct-encoded = "%" HEXDIG HEXDIG
 unreserved  = ALPHA / DIGIT / "-" / "." / "_" / "~"
 
  -}
+
+{-
+
+-- |Escape character if supplied predicate is not satisfied,
+--  otherwise return character as singleton string.
+--
+escapeURIChar :: (Char->Bool) -> Char -> String
+escapeURIChar p c
+    | p c       = [c]
+    | otherwise = '%' : myShowHex (ord c) ""
+    where
+        myShowHex :: Int -> ShowS
+        myShowHex n r =  case showIntAtBase 16 (toChrHex) n r of
+            []  -> "00"
+            [c] -> ['0',c]
+            cs  -> cs
+        toChrHex d
+            | d < 10    = chr (ord '0' + fromIntegral d)
+            | otherwise = chr (ord 'A' + fromIntegral (d - 10))
+
+ -}
+
+-- | Transform any octet to its percent encoded form.
+percentEncode  :: Word8 -> ByteString
+percentEncode w = "%" `snoc` mod' (w `shiftR` 4) `snoc` mod' w
+  where mod' w' = "0123456789abcdef" `index` fromIntegral (w' `mod` 16)
 
