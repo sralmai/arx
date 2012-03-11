@@ -18,15 +18,12 @@ import System.Posix.ARX.URL
 --
 -- * an environment mapping,
 --
--- * a directory to change to,
---
--- * files to place in that directory (or in dirs relative to it).
+-- * files to place in the working directory (or in dirs relative to it).
 --
 --   Collectively, these attributes capture much of what makes a running
 --   @UNIX@ app what it is -- its code, configuration and environment.
 data Task = Task { cmd   :: (Path, [CString])
                  , env   :: [Env]
-                 , dir   :: Path
                  , files :: Files }
  deriving (Eq, Ord, Show)
 
@@ -73,9 +70,11 @@ data Executor = Executor
   , detach :: Maybe Detach -- ^ Make it possible for the process to run with
                            --   the terminal detached (for example, with
                            --   screen). The default is not to detach.
+  , dir :: Maybe Path -- ^ Directory to run task in, if a change is desired.
   }
 -- | Executor with defaults set.
-executor = Executor { tag="arx", tmp="/tmp", redirect=Nothing, detach=Nothing }
+executor = Executor { tag="arx", tmp="/tmp", redirect=Nothing, detach=Nothing
+                    , dir=Nothing }
 
 data Detach = Screen  -- TODO: add  | TMUX | NoHUP
 -- TODO: data LXC = LXC ...
