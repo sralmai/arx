@@ -54,12 +54,6 @@ instance Parse URL where parser = url <$> (parser <* string "://")
                                        where url a (b, c) d e = URL a b c d e
                                              qf = option "" queryFragmentP
 
--- if authority?
---   need a slash if path?
--- else
---   need a slash
--- end
-
 -- | \"Many URI schemes include a hierarchical element for a naming authority
 --     so that governance of the name space defined by the remainder of the URI
 --     is delegated to that authority...\"
@@ -85,20 +79,27 @@ instance Parse Authority where parser  =  Authority
 --     identifiers using that scheme.\"
 -- >  scheme      = ALPHA *( ALPHA / DIGIT / "+" / "-" / "." )
 newtype Scheme = Scheme ByteString deriving (Eq, Ord, Show)
+instance Bytes Scheme where bytes (Scheme b) = b
 instance Parse Scheme where parser  =  (Scheme .) . cons
                                    <$> satisfy (inClass "a-zA-Z")
                                    <*> takeWhile (inClass "a-zA-Z0-9.+-")
 
-
 class Parse t where parser :: Parser t
+class Bytes t where bytes :: t -> ByteString
 
 -- | > *( unreserved / pct-encoded / sub-delims / ":" )
+userinfoOctet :: Word8 -> Bool
+userinfoOctet  = inClass "-a-zA-Z0-9._~!$&'()*+,;=:"
+
 userinfoP :: Parser ByteString
-userinfoP  = withPercents (inClass "-a-zA-Z0-9._~!$&'()*+,;=:")
+userinfoP  = withPercents userinfoOctet
 
 -- | > *( unreserved / pct-encoded / sub-delims )
+regNameOctet :: Word8 -> Bool
+regNameOctet  = inClass "-a-zA-Z0-9._~!$&'()*+,;="
+
 regNameP :: Parser ByteString
-regNameP  = withPercents (inClass "-a-zA-Z0-9._~!$&'()*+,;=")
+regNameP  = withPercents regNameOctet
 
 percent :: Parser Word8
 percent  = char '%' *> usingOnly 2 hexadecimal
@@ -123,8 +124,12 @@ percent  = char '%' *> usingOnly 2 hexadecimal
 -- content can be encoded with percent encoding.
 pathRootlessP :: Parser ByteString
 pathRootlessP  = mappend <$> segment <*> option "" next
- where segment = withPercents (inClass "-a-zA-Z0-9._~!$&'()*+,;=:@")
+ where segment = withPercents segmentOctet
        next    = char '/' *> (mappend "/" <$> pathRootlessP)
+
+-- > unreserved / pct-encoded / sub-delims / ":" / "@"
+segmentOctet :: Word8 -> Bool
+segmentOctet  = inClass "-a-zA-Z0-9._~!$&'()*+,;=:@"
 
 -- ^ To parse the authority and path:
 --
@@ -138,8 +143,11 @@ authorityPath  =  (,) <$> (Just <$> parser) <*> option "" (char '/' *> pathP)
 
 -- | The query and fragment have identical productions in the RFC.
 -- > *( pchar / "/" / "?" )
+queryFragmentOctet :: Word8 -> Bool
+queryFragmentOctet  = inClass "-a-zA-Z0-9._~!$&'()*+,;=:@/?"
+
 queryFragmentP :: Parser ByteString
-queryFragmentP  = withPercents (inClass "-a-zA-Z0-9._~!$&'()*+,;=:@/?")
+queryFragmentP  = withPercents queryFragmentOctet
 
 usingOnly    :: Int -> Parser t -> Parser t
 usingOnly c p = either (const mzero) return . parseOnly p =<< take c
