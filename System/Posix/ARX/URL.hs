@@ -168,27 +168,6 @@ unreserved  = ALPHA / DIGIT / "-" / "." / "_" / "~"
 
  -}
 
-{-
-
--- |Escape character if supplied predicate is not satisfied,
---  otherwise return character as singleton string.
---
-escapeURIChar :: (Char->Bool) -> Char -> String
-escapeURIChar p c
-    | p c       = [c]
-    | otherwise = '%' : myShowHex (ord c) ""
-    where
-        myShowHex :: Int -> ShowS
-        myShowHex n r =  case showIntAtBase 16 (toChrHex) n r of
-            []  -> "00"
-            [c] -> ['0',c]
-            cs  -> cs
-        toChrHex d
-            | d < 10    = chr (ord '0' + fromIntegral d)
-            | otherwise = chr (ord 'A' + fromIntegral (d - 10))
-
- -}
-
 -- | Transform any octet to its percent encoded form.
 percentEncode  :: Word8 -> ByteString
 percentEncode w = "%" `snoc` mod' (w `shiftR` 4) `snoc` mod' w
