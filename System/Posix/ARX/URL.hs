@@ -1,14 +1,17 @@
+{-# LANGUAGE OverloadedStrings
+           , RecordWildCards #-}
 -- | URL parser, following RFC 3986 (<http://tools.ietf.org/html/rfc3986>).
 module System.Posix.ARX.URL where
 
 import Control.Applicative
 import Control.Monad
 import Data.Bits
-import Data.ByteString hiding (takeWhile, take)
+import Data.ByteString.Char8 (pack)
+import Data.ByteString hiding (pack, take, takeWhile)
 import Data.Either
 import Data.Monoid
 import Data.Word
-import Prelude hiding (takeWhile, take)
+import Prelude hiding (null, take, takeWhile)
 
 import Data.Attoparsec.ByteString
 import Data.Attoparsec.ByteString.Char8 (hexadecimal, decimal, char)
@@ -72,6 +75,11 @@ instance Parse Authority where parser  =  Authority
                                       <$> option "" (userinfoP <* char '@')
                                       <*> regNameP
                                       <*> optional (char ':' *> decimal)
+instance Encode Authority where
+  encode Authority{..} = mconcat
+    [ selectiveEncode userinfoOctet userinfo `concatNonEmpty` "@"
+    , selectiveEncode regNameOctet host
+    , maybe "" (mappend ":" . pack . show) port ]
 
 -- | \"Each URI begins with a scheme name that refers to a specification for
 --     assigning identifiers within that scheme. As such, the URI syntax is a
@@ -183,4 +191,7 @@ selectiveEncode predicate bytes = unfoldr f ("", bytes)
          next = do (w, remaining') <- uncons remaining
                    if predicate w then Just (w, (queued, remaining'))
                                   else f (percentEncode w, remaining')
+
+concatNonEmpty a b | null a || null b = ""
+                   | otherwise        = mappend a b
 
