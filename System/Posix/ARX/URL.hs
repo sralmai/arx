@@ -1,17 +1,21 @@
 {-# LANGUAGE OverloadedStrings
-           , RecordWildCards #-}
+           , RecordWildCards
+           , PatternGuards #-}
 -- | URL parser, following RFC 3986 (<http://tools.ietf.org/html/rfc3986>).
 module System.Posix.ARX.URL where
 
 import Control.Applicative
 import Control.Monad
 import Data.Bits
-import Data.ByteString.Char8 (pack)
-import Data.ByteString hiding (pack, take, takeWhile)
+import Data.ByteString.Char8 (groupBy, pack)
+import Data.ByteString hiding (groupBy, pack, take, takeWhile)
 import Data.Either
+import qualified Data.List
+import Data.Maybe
 import Data.Monoid
+import Data.String
 import Data.Word
-import Prelude hiding (null, take, takeWhile)
+import Prelude hiding (concatMap, drop, null, take, takeWhile)
 
 import Data.Attoparsec.ByteString
 import Data.Attoparsec.ByteString.Char8 (hexadecimal, decimal, char)
@@ -51,12 +55,20 @@ data URL = URL { scheme    :: Scheme
                , query     :: ByteString
                , fragment  :: ByteString }
  deriving (Eq, Ord, Show)
+instance IsString URL where fromString = fromRight . fromString'
 instance Parse URL where parser = url <$> (parser <* string "://")
                                       <*> authorityPath
                                       <*> option "" (char '?' *> qf)
                                       <*> option "" (char '#' *> qf)
                                        where url a (b, c) d e = URL a b c d e
                                              qf = option "" queryFragmentP
+instance Encode URL where
+  encode URL{..} = mconcat
+    [ encode scheme, "://"
+    , maybe "" encode authority
+    , "/" `concatNonEmpty` pathEncode path
+    , "?" `concatNonEmpty` selectiveEncode queryFragmentOctet query
+    , "#" `concatNonEmpty` selectiveEncode queryFragmentOctet fragment ]
 
 -- | \"Many URI schemes include a hierarchical element for a naming authority
 --     so that governance of the name space defined by the remainder of the URI
@@ -71,6 +83,7 @@ data Authority = Authority { userinfo :: ByteString
                            , host     :: ByteString
                            , port     :: Maybe Word16 }
  deriving (Eq, Ord, Show)
+instance IsString Authority where fromString = fromRight . fromString'
 instance Parse Authority where parser  =  Authority
                                       <$> option "" (userinfoP <* char '@')
                                       <*> regNameP
@@ -88,13 +101,17 @@ instance Encode Authority where
 --     identifiers using that scheme.\"
 -- >  scheme      = ALPHA *( ALPHA / DIGIT / "+" / "-" / "." )
 newtype Scheme = Scheme ByteString deriving (Eq, Ord, Show)
+instance IsString Scheme where fromString = fromRight . fromString'
 instance Encode Scheme where encode (Scheme b) = b
 instance Parse Scheme where parser  =  (Scheme .) . cons
                                    <$> satisfy (inClass "a-zA-Z")
                                    <*> takeWhile (inClass "a-zA-Z0-9.+-")
 
-class Parse t where parser :: Parser t
+-- | Class for encoding items from this module as URLs.
 class Encode t where encode :: t -> ByteString
+-- | Class for parsing URL-related datatypes.
+class Parse t where parser :: Parser t
+
 
 -- | > *( unreserved / pct-encoded / sub-delims / ":" )
 userinfoOctet :: Word8 -> Bool
@@ -181,7 +198,7 @@ percentEncode  :: Word8 -> ByteString
 percentEncode w = "%" `snoc` mod' (w `shiftR` 4) `snoc` mod' w
   where mod' w' = "0123456789ABCDEF" `index` fromIntegral (w' `mod` 16)
 
--- | Percent encode a 'ByteString', ignorning octets that match the predicate.
+-- | Percent encode a 'ByteString', ignoring octets that match the predicate.
 selectiveEncode :: (Word8 -> Bool) -> ByteString -> ByteString
 selectiveEncode predicate bytes = unfoldr f ("", bytes)
  where f (queued, remaining) = dequeue <|> next
@@ -194,4 +211,22 @@ selectiveEncode predicate bytes = unfoldr f ("", bytes)
 
 concatNonEmpty a b | null a || null b = ""
                    | otherwise        = mappend a b
+
+-- | Slash runs are not allowed in encoded paths. Here, this is interpreted to
+--   mean that the first slash in path data, which would come after the slash
+--   separating the path and the scheme or authority, should be escaped.
+pathEncode :: ByteString -> ByteString
+pathEncode  = mconcat . fmap enc . groupBy neitherSlash
+ where
+  enc s | "/" == s          = "/"
+        | isPrefixOf "//" s = "/" `mappend` concatMap percentEncode (drop 1 s)
+        | otherwise         = selectiveEncode regNameOctet s
+  neitherSlash a b          = (a /= '/' && b /= '/') || (a == '/' && b == '/')
+
+
+fromString' s = parseOnly (parser <* endOfInput) (fromString s)
+
+{-# WARNING fromRight "This function calls error on Left; not safe." #-}
+fromRight (Right x) = x
+fromRight (Left s) = error s
 
