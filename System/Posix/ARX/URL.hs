@@ -171,5 +171,16 @@ unreserved  = ALPHA / DIGIT / "-" / "." / "_" / "~"
 -- | Transform any octet to its percent encoded form.
 percentEncode  :: Word8 -> ByteString
 percentEncode w = "%" `snoc` mod' (w `shiftR` 4) `snoc` mod' w
-  where mod' w' = "0123456789abcdef" `index` fromIntegral (w' `mod` 16)
+  where mod' w' = "0123456789ABCDEF" `index` fromIntegral (w' `mod` 16)
+
+-- | Percent encode a 'ByteString', ignorning octets that match the predicate.
+selectiveEncode :: (Word8 -> Bool) -> ByteString -> ByteString
+selectiveEncode predicate bytes = unfoldr f ("", bytes)
+ where f (queued, remaining) = dequeue <|> next
+        where
+         dequeue = do (w, queued') <- uncons queued
+                      Just (w, (queued', remaining))
+         next = do (w, remaining') <- uncons remaining
+                   if predicate w then Just (w, (queued, remaining'))
+                                  else f (percentEncode w, remaining')
 
