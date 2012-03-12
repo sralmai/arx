@@ -6,10 +6,11 @@ import Data.ByteString.Lazy (ByteString)
 import Data.Monoid
 import Data.Word
 
+import Network.URLb (URL)
+
 import System.Posix.ARX.Composer
 import System.Posix.ARX.Strings(CString(), Env(), Path())
 import System.Posix.ARX.LDHName(LDHName())
-import System.Posix.ARX.URL
 
 
 -- | A task to run on a @UNIX@ system. The task specification combines:

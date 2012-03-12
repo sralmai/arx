@@ -9,8 +9,6 @@ import Data.Monoid
 import Prelude hiding (elem, takeWhile, null)
 import Data.String
 
-import System.Posix.ARX.URL
-
 
 -- | This type represents the value and not the layout of a C string: a
 --   sequence of bytes not containing null.
