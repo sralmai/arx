@@ -4,13 +4,15 @@ module System.Posix.ARX where
 
 import Data.ByteString.Lazy (ByteString)
 import Data.Monoid
+import Data.Ord
 import Data.Word
 
-import Network.URLb (URL)
+import Network.URI (URI())
 
 import System.Posix.ARX.Composer
 import System.Posix.ARX.Strings(CString(), Env(), Path())
 import System.Posix.ARX.LDHName(LDHName())
+import System.Posix.ARX.URI
 
 
 -- | A task to run on a @UNIX@ system. The task specification combines:
@@ -45,10 +47,14 @@ data FileSource
   -- | A file archive. For @tar@, @tbz@ and @tgz@, the archive type is
   --   automatically detected by @ARX@.
   = Archive ByteString
-  -- | A URL indicating a source for files via @git@, over @HTTP@ or other,
-  --   extended mechanisms.
-  | URL URL
- deriving (Eq, Ord, Show)
+  -- | A URI indicating a source for files via @HTTP@ (for example).
+  | URI URI
+ deriving (Eq, Show)
+instance Ord FileSource where
+  Archive a `compare` Archive b = compare a b
+  Archive _ `compare` URI _     = LT
+  URI _     `compare` Archive _ = GT
+  URI a     `compare` URI b     = normalized a `compare` normalized b
 
 
 -- | The 'Executor' unpacks and runs a 'Task'. In @ARX@, the executor is a
@@ -80,4 +86,5 @@ executor = Executor { tag="arx", tmp="/tmp", dir=Nothing
 data Detach = Screen  -- TODO: add  | TMUX | NoHUP
 -- TODO: data LXC = LXC ...
 data Redirect = Syslog
+
 

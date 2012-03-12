@@ -73,11 +73,11 @@ library
                               , blaze-builder >= 0.3
                               , bytestring-nums >= 0.3.3
                               , file-embed >= 0.0.4.1
+                              , network >= 2.1.0.0
                               , parsec >= 3.1.2
                               , process >= 1.0
                               , shell-escape >= 0.1.1
                               , template-haskell
-                              , URLb
                               , vector >= 0.9
                               , vector-algorithms >= 0.5.3
   exposed-modules             : System.Posix.ARX
@@ -110,11 +110,11 @@ executable                      arx
                               , blaze-builder >= 0.3
                               , bytestring-nums >= 0.3.3
                               , file-embed >= 0.0.4.1
+                              , network >= 2.1.0.0
                               , parsec >= 3.1.2
                               , process >= 1.0
                               , shell-escape >= 0.1.1
                               , template-haskell
-                              , URLb
                               , vector >= 0.9
                               , vector-algorithms >= 0.5.3
   extensions                  : FlexibleInstances
