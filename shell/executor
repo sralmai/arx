@@ -1,5 +1,7 @@
 #!/bin/sh
 set -e -u
+# A token that is very likely unique on this machine.
+token="$tag"_`date -u +%FT%TZ | tr -d :-`_$$
 phases() {
   mktmp
   trap_tmp/level_1
