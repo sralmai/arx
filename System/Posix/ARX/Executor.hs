@@ -1,6 +1,11 @@
 
 module System.Posix.ARX.Executor where
 
+import System.Posix.ARX.Composer
+import System.Posix.ARX.LDHName
+import qualified System.Posix.ARX.Sh as Sh
+import System.Posix.ARX.Strings
+
 -- | The 'Executor' unpacks and runs a 'Task'. In @ARX@, the executor is a
 --   shell script with the task compiled in to it. As a first step, the
 --   script always creates a temporary directory to unpack its libraries; a
@@ -31,3 +36,8 @@ data Detach = Screen  -- TODO: add  | TMUX | NoHUP
 data Redirect = Syslog
 
 
+screen :: TOK
+screen = CMD lib "screen_"
+
+lib :: CMD
+lib = Lib True (Sh.VarVal [Left "dir", Right "/lib"])

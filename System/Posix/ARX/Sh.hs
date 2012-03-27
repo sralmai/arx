@@ -30,7 +30,8 @@ instance Sh Val       where sh = Esc.bytes . Esc.sh . bytes
 -- | Valid shell variable names consist of a leading letter or underscore and
 --   then any number of letters, underscores or digits.
 newtype Var = Var ByteString deriving (Eq, Ord, Show)
-instance Sh Var where sh (Var bytes) = bytes
+instance IsString Var where fromString = fromJust . var . fromString
+instance Sh Var       where sh (Var bytes) = bytes
 
 var             :: ByteString -> Maybe Var
 var ""           = Nothing
