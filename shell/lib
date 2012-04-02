@@ -61,26 +61,6 @@ logger_() {
 }|logger -t "$syslog_tag" -i -p user.info -s 2>&1 1>&1 # &3 is in the pipe.
 }
 
-# This redirect pattern is used for tee and logger.
-general_redirect() {
-  o="$1" ; e="$2" ; c="$3"
-  shift  ; shift  ; shift
-{   exec      3>&1 # Here, &1 refers to the grouping's STDOUT. We save it in &3.
-  # In this line, &1 and &2 refer to the file descriptors of the command, not
-  # of the grouping. We cause the STDERR reference to point to the new output
-  # stream for this command, which is a pipe to the error logger, while we
-  # cause the STDOUT reference to point to the output stream of the grouping
-  # as a whole, which is a piped to the output logger.
-    "$@"      2>&1 1>&3 |
-  # Cause whatever output is produced by the error logger to go back on
-  # STDERR. Tee will copy its input to STDOUT and logger can be made to copy
-  # its input to STDERR; we handle both cases.
-    "$c" "$e" 2>&2 1>&2
-  # Cause whatever output is produced by the output logger to go back on
-  # STDOUT, similar to the case for the error logger.
-} | "$c" "$o" 2>&1 1>&1
-}
-
 
 # Portably determine a canonical path for the first argument. Intended to
 # emulate `readlink --canonical' on systems that have a readlink which
