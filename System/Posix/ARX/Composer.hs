@@ -73,13 +73,13 @@ compile (ExecV tokens)       =  snd (foldr f (Sh True, []) tokens)
    where
     ba:ck:to:sh:[]           =  "/bin/sh":"-c":"\"$@\"":"sh":[]
     args' = case t of
-      Sh _ | Sh False <- t'               -> arg:args
-           | otherwise                    -> ba:ck:to:sh:arg:args
-      Lib _ x | Sh False <- t'            -> "exec":x:arg:args
-              | Lib False y <- t', x /= y -> "exec":x:arg:args
-              | Lib False y <- t', x == y -> arg:args
-              | otherwise                 -> x:arg:args
-      External | Sh False <- t'           -> "exec":arg:args
-               | Lib False _ <- t'        -> "exec":arg:args
-               | otherwise                -> arg:args
+      Sh _     | Sh False    <- t'         -> arg:args
+               | otherwise                 -> ba:ck:to:sh:arg:args
+      Lib _ x  | Sh False    <- t'         -> "exec":x:arg:args
+               | Lib False y <- t', x /= y -> "exec":x:arg:args
+               | Lib False y <- t', x == y -> arg:args
+               | otherwise                 -> x:arg:args
+      External | Sh False    <- t'         -> "exec":arg:args
+               | Lib False _ <- t'         -> "exec":arg:args
+               | otherwise                 -> arg:args
 
