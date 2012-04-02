@@ -52,22 +52,13 @@ curl_archive() {
 }
 
 
-# Log to files o and e in the present directory.
-files_oe() {
-  "$@" 2>e 1>o
-}
-
-tee_oe() {
-  general_redirect o e tee "$@"
-}
-
-syslog_oe() {
-  general_redirect user.err user.info logger_shim "$@"
-}
-
-logger_shim() {
-  tag="`tag`"
-  logger -t "$tag" -i -p "$1"
+logger_() {
+  syslog_tag="`tag`"
+  exec 4>&2 # Save the function's STDERR to &4.
+{ exec 3>&1 # Save the grouping's STDERR to &3.
+  "$@" 2>&1 1>&3 | # Write out to &3 and capture err in the pipe.
+  logger -t "$syslog_tag" -i -p user.err -s 2>&4 1>&4 # Log err and echo.
+}|logger -t "$syslog_tag" -i -p user.info -s 2>&1 1>&1 # &3 is in the pipe.
 }
 
 # This redirect pattern is used for tee and logger.
