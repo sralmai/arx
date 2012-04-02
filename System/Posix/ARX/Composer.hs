@@ -64,6 +64,7 @@ instance IsString TOK where
   fromString                 =  CMD External . fromString
 
 
+compile                     ::  ExecV -> [Sh.VarVal]
 compile (ExecV tokens)       =  snd (foldr f (Sh True, []) tokens)
  where
   f                         ::  TOK -> (CMD, [Sh.VarVal]) -> (CMD, [Sh.VarVal])
