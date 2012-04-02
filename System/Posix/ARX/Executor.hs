@@ -18,8 +18,7 @@ data Executor = Executor
                    --   and other resources allocated by @ARX@. The default
                    --   is @arx@. The names are constrained by the
                    --   letter-digit-hypen rule common to DNS.
-  , tmp :: Path -- ^ The directory where temporary directories are allocated.
-                --   The default is @/tmp@.
+  , tmp :: TMP -- ^ Temporary directory creation and removal settings.
   , dir :: Maybe Path -- ^ Directory to run task in, if a change is desired.
   , redirect :: Maybe Redirect -- ^ Redirection of @STDERR@ and @STDOUT@. The
                                --   default is not to redirect.
@@ -28,16 +27,51 @@ data Executor = Executor
                            --   screen). The default is not to detach.
   }
 -- | Executor with defaults set.
-executor = Executor { tag="arx", tmp="/tmp", dir=Nothing
-                    , redirect=Nothing, detach=Nothing }
+executorDefaults = Executor { tag="arx", tmp=tmpDefaults, dir=Nothing
+                            , redirect=Nothing, detach=Nothing }
 
-data Detach = Screen  -- TODO: add  | TMUX | NoHUP
+data Detach = Screen (Maybe LDHName) -- TODO: add  | TMUX | NoHUP
+
+data Redirect = Logger (Maybe CString)
+
+data TMP = TMP { path :: Path -- ^ Directory in which to create tmp dirs. The
+                              --   default is @/tmp@.
+               , rmOnSuccess :: Bool -- ^ Remove tmp dir on successful exit?
+                                     --   The default is to do so.
+               , rmOnFailure :: Bool -- ^ Remove tmp dir on failure?
+                                     --   The default is to do so.
+               }
+tmpDefaults = TMP "/tmp" True True
+
 -- TODO: data LXC = LXC ...
-data Redirect = Syslog
 
 
 screen :: TOK
-screen = CMD lib "screen_"
+screen  = CMD lib "screen_"
+
+logger :: TOK
+logger  = CMD lib "logger_"
 
 lib :: CMD
-lib = Lib True (Sh.VarVal [Left "dir", Right "/lib"])
+lib  = Lib True libPath
+
+-- | The library is stored at @$dir/lib@, with @$dir@ set by the executor
+--   dynamically.
+libPath :: Sh.VarVal
+libPath  = Sh.VarVal [Left "dir", Right "/lib"]
+
+
+-- How to determine whether or not to use tmpx:
+--  * If explicitly requested, use it.
+--  * If a directory is not set, use it.
+--  * Compile the executor without tmpx and if we have to call back in to the
+--    library, add tmpx statements and recompile.
+compile tmpxNeeded Executor{..}
+  | tmpxNeeded = "main":tmpVars:...
+  | otherwise  = ...
+
+tmpVars :: TMP -> [Sh.VarVal]
+tmpVars TMP{..} = Sh.VarVal . (:[]) . Right . val <$>
+  [ mappend "tmp=" (bytes path)
+  , if rmOnSuccess then "rm0=true" else "rm0=false"
+  , if rmOnFailure then "rm1=true" else "rm1=false" ]
