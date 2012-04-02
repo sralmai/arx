@@ -77,7 +77,7 @@ compile (ExecV tokens)       =  snd (foldr f (Sh True, []) tokens)
       Lib _ x | Sh False <- t'            -> "exec":x:arg:args
               | Lib False y <- t', x /= y -> "exec":x:arg:args
               | Lib False y <- t', x == y -> arg:args
-              | otherwise                 -> arg:args
+              | otherwise                 -> x:arg:args
       External | Sh False <- t'           -> "exec":arg:args
                | Lib False _ <- t'        -> "exec":arg:args
                | otherwise                -> arg:args
