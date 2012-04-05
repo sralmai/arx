@@ -30,9 +30,13 @@ data Executor = Executor
 executorDefaults = Executor { tag="arx", tmp=tmpDefaults, dir=Nothing
                             , redirect=Nothing, detach=Nothing }
 
-data Detach = Screen (Maybe LDHName) -- TODO: add  | TMUX | NoHUP
+data Detach = Screen -- TODO: add  | TMUX | NoHUP
+instance Compiled Detach where
+  compile (Screen _) = [CMD lib "screen_"]
 
 data Redirect = Logger (Maybe CString)
+instance Compiled Redirect where
+  compile (Logger _) = [CMD lib "logger_"]
 
 data TMP = TMP { path :: Path -- ^ Directory in which to create tmp dirs. The
                               --   default is @/tmp@.
@@ -45,12 +49,39 @@ tmpDefaults = TMP "/tmp" True True
 
 -- TODO: data LXC = LXC ...
 
+-- How to determine whether or not to use tmpx:
+--  * If explicitly requested, use it.
+--  * If a directory is not set, use it.
+--  * Compile the executor without tmpx and if we have to call back in to the
+--    library, add tmpx statements and recompile.
 
-screen :: TOK
-screen  = CMD lib "screen_"
+-- | Naively translate an executor to tokens, not handling needed/wanted
+--   temporary directores.
+direct :: Executor -> [TOK]
+direct Executor{..} = mconcat [ maybe [] compile detach,
+                                maybe [] compile redirect ]
+data Executor = Executor
+  { tag :: LDHName -- ^ A short prefix used for screens, temporary directories
+                   --   and other resources allocated by @ARX@. The default
+                   --   is @arx@. The names are constrained by the
+                   --   letter-digit-hypen rule common to DNS.
+  , tmp :: TMP -- ^ Temporary directory creation and removal settings.
+  , dir :: Maybe Path -- ^ Directory to run task in, if a change is desired.
+  , redirect :: Maybe Redirect -- ^ Redirection of @STDERR@ and @STDOUT@. The
+                               --   default is not to redirect.
+  , detach :: Maybe Detach -- ^ Make it possible for the process to run with
+                           --   the terminal detached (for example, with
+                           --   screen). The default is not to detach.
+  }
 
-logger :: TOK
-logger  = CMD lib "logger_"
+tmpVars :: TMP -> [Sh.VarVal]
+tmpVars TMP{..} = Sh.VarVal . (:[]) . Right . val <$>
+  [ mappend "tmp=" (bytes path)
+  , if rmOnSuccess then "rm0=true" else "rm0=false"
+  , if rmOnFailure then "rm1=true" else "rm1=false" ]
+
+
+class Compile t where compile :: t -> [TOK]
 
 lib :: CMD
 lib  = Lib True libPath
@@ -61,17 +92,3 @@ libPath :: Sh.VarVal
 libPath  = Sh.VarVal [Left "dir", Right "/lib"]
 
 
--- How to determine whether or not to use tmpx:
---  * If explicitly requested, use it.
---  * If a directory is not set, use it.
---  * Compile the executor without tmpx and if we have to call back in to the
---    library, add tmpx statements and recompile.
-compile tmpxNeeded Executor{..}
-  | tmpxNeeded = "main":tmpVars:...
-  | otherwise  = ...
-
-tmpVars :: TMP -> [Sh.VarVal]
-tmpVars TMP{..} = Sh.VarVal . (:[]) . Right . val <$>
-  [ mappend "tmp=" (bytes path)
-  , if rmOnSuccess then "rm0=true" else "rm0=false"
-  , if rmOnFailure then "rm1=true" else "rm1=false" ]
