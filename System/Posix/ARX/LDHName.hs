@@ -61,6 +61,9 @@ instance IsString LDHName where fromString = fromJust . ldh . fromString
 -- >
 -- > names           255 octets or less
 --
+--   In the RFC 1035 productions, labels must begin with letters; but in RFC
+--   1123 this was relaxed to a letter or a digit.
+--
 --   According to many sources on the internet, including Wikipedia, the
 --   practical length of the character data in a domain name is 253
 --   characters. The limit of 255 is then interpreted as the total storage
@@ -68,11 +71,13 @@ instance IsString LDHName where fromString = fromJust . ldh . fromString
 --   @NUL@.
 --
 --   We vary from the RFC by requiring non-empty names.
+--
+--  In 
 ldh  :: ByteString -> Maybe LDHName
 ldh b = (ldhRE =~ b) >> guard (length b <= 253) >> Just (LDHName b)
 
-ldhRE = "^[a-zA-Z]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\
-     \([.][a-zA-Z]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?){0,126}$"
+ldhRE = "^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\
+     \([.][a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?){0,126}$"
   -- Haskell string line continuations are stupid. Neither backslash makes
   -- it's way through to the regular expression; you can ignore them.
 
