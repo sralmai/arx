@@ -1,4 +1,5 @@
 #!/bin/sh
+set -e -u
 # ARX requires that at least these shell functions are available in the shell
 # libary. They are prepended to every shell library (and thus can be
 # overridden).
@@ -11,5 +12,9 @@ source_() {
 
 exec_() {
   exec "$@"
+}
+
+trap_dot() {
+
 }
 

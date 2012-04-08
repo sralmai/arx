@@ -58,8 +58,10 @@ tmpDefaults = TMP "/tmp" True True
 -- | Naively translate an executor to tokens, not handling needed/wanted
 --   temporary directores.
 direct :: Executor -> [TOK]
-direct Executor{..} = mconcat [ maybe [] compile detach,
-                                maybe [] compile redirect ]
+direct Executor{..} = case dir in
+  Nothing -> mconcat [ [CMD lib "tmpx"],
+                       maybe [] ((++[CMD lib "trap_dot"]) . compile) detach,
+                       maybe [] compile redirect ]
 data Executor = Executor
   { tag :: LDHName -- ^ A short prefix used for screens, temporary directories
                    --   and other resources allocated by @ARX@. The default
