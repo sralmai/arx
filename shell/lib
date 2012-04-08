@@ -1,11 +1,46 @@
 #!/bin/sh
 
-# Note that shell variables are implicitly global. Thus, we require that all
-# variables used in a function must be set in that function. Idempotent
-# generators, like `tag', allow variables to be shared.
+
+main() {
+  set -eu
+  vars defaults "$@"
+}
+
+# Sets defualts for unset vars and calls "$@".
+defaults() {
+  : ${rm0:=true}
+  : ${rm1:=true}
+  : ${flat_token:=true}
+  : ${prefix:=arx}
+  : ${token:=`time_and_pid "$flat_token"`}
+  : ${tag:=${prefix:+${prefix}_}$token}
+  : ${screen:=`tag`}
+  "$@"
+}
+
+# Use recursion to process arguments for name=value pairs and set local shell
+# variables in accord with them. When we're done with name=value pairs, call
+# $1 with the remaining arguments.
+vars() {
+  command="$1" ; shift
+  case "${1:-}" in
+    command=*) err 'vars: It is an error to set command=...' ;;
+    *=*)       typeset "$1" ; shift ; vars "$command" "$@" ;;
+    *)         "$command" "$@"
+  esac
+}
+
+# Generates an ID that is very likely unique on this system -- date to seconds
+# and PID -- and optionally strips characters that make it easier to read but
+# harder to use in URLs, in git branches, with Hadoop, in some build systems,
+# in the PATH and probably many other things.
+time_and_pid() {
+  date -u +%FT%TZ#$$ | { ! $1 && cat || { tr -d :- | tr '#' _ ;} ;}
+}
+
 
 screen_S() {
-  screen -S "`tag`" "$@"
+  screen -S "$screen" "$@"
 }
 
 # Initialize screen with settings. Settings are fed to screen's eval function,
@@ -13,15 +48,15 @@ screen_S() {
 #
 #   screen_setup 'zombie ko' 'defutf8 on'
 #
+screen_setup=false
 screen_setup() {
-  if [ ! -n "${screen_setup:-}" ]
+  if ! $screen_setup
   then
-    tag="`tag`"
-    ! { screen -ls | fgrep -q "$tag" ;} ||
-      { err 'ERR: screen collision!' ; return 2 ;}
-    ( cd / ; screen_S -dm -ln sleep 2 ) # Ensure PWD for screen is /.
+    ! { screen -ls | fgrep -q "$screen" ;} ||
+    err 'screen_setup: screen collision!'
+    ( cd / ; screen_S -dm -ln sleep 2 ) # Ensure CWD for screen is /.
     screen_setup=true
-    screen_S      -X eval 'screen 1 sleep 1' 'select 0' kill "$@"
+    screen_S -X eval 'screen 1 sleep 1' 'select 0' kill "$@"
   fi
 }
 
@@ -30,10 +65,10 @@ screen_setup() {
 screen_() {
   this_script="`canonical_path "$0"`"
   screen_setup
-  screen_S      -X screen 0 "$this_script" cd_ "`pwd -P`" "$@"
-  screen_S      -X eval 'select 1' kill
-  err "New screen is:"
-  out "`tag`"
+  screen_S -X screen 0 "$this_script" cd_ "`pwd -P`" "$@"
+  screen_S -X eval 'select 1' kill
+  msg "New screen is:"
+  out "$screen"
 }
 
 
@@ -99,18 +134,31 @@ cd_() {
   "$@"
 }
 
+# Set a trap to remove the directory given as the first argument.
+trap_d=
 trap_d() {
-  
+  [ ! "${trap_d:-}" ] ||
+  err 'trap_d: var trap_d already in use! trap_d called twice????!!!?!?'
+  trap_d="$1"
+  trap 'case $?/$rm0/$rm1 in
+          0/true/*)      rm -rf "$trap_d" ;;
+          [1-9]*/*/true) rm -rf "$trap_d" ;;
+        esac' EXIT
+  trap 'exit 2' HUP INT QUIT BUS SEGV PIPE TERM
 }
 
-
 err() {
-  echo "$@" 1>&2
+  msg "$@"
+  exit 2
+}
+
+msg() {
+  printf '%s\n' "$*" 1>&2
 }
 
 out() {
-  echo "$@"
+  printf '%s\n' "$*"
 }
 
-"$@"
+main "$@"
 
