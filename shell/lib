@@ -10,11 +10,13 @@ main() {
 defaults() {
   : ${rm0:=true}
   : ${rm1:=true}
+  : ${tmp:=/tmp}
   : ${flat_token:=true}
   : ${prefix:=arx}
   : ${token:=`time_and_pid "$flat_token"`}
   : ${tag:=${prefix:+${prefix}_}$token}
   : ${screen:=`tag`}
+  : ${tmp_dir:=$tmp/$tag}
   "$@"
 }
 
@@ -133,18 +135,30 @@ cd_() {
   "$@"
 }
 
-# Set a trap to remove the directory given as the first argument.
-trap_d=
-trap_d() {
-  [ ! "${trap_d:-}" ] ||
-  err 'trap_d: var trap_d already in use! trap_d called twice????!!!?!?'
-  trap_d="$1"
+# Set a trap to remove the tmp_dir.
+trap_tmp=
+trap_tmp() {
+  [ ! "${trap_tmp:-}" ] ||
+  err 'trap_tmp: var trap_tmp already in use! trap_tmp called twice????!!!?!?'
+  trap_tmp="$tmp_dir"
   trap 'case $?/$rm0/$rm1 in
-          0/true/*)      rm -rf "$trap_d" ;;
-          [1-9]*/*/true) rm -rf "$trap_d" ;;
+          0/true/*)      rm -rf "$trap_tmp" ;;
+          [1-9]*/*/true) rm -rf "$trap_tmp" ;;
         esac' EXIT
   trap 'exit 2' HUP INT QUIT BUS SEGV PIPE TERM
+  "$@" # A subshell is necessary to protect the trap but we do not subshell
+       # here because user code is always called behind exec.
 }
+
+# Create staging area and set a trap to ensure its removal.
+tmp() {
+  mkdir -p "`dirname "$tmp_dir"`"
+  mkdir "$tmp_dir" # Fail if dir exists.
+  cd "$tmp_dir"
+  tmp_dir="`pwd -P`" # Update staging directory with absolute path.
+  trap_tmp "$@"
+}
+
 
 err() {
   msg "$@"

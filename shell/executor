@@ -1,7 +1,6 @@
 #!/bin/sh
 set -e -u
 # A token that is very likely unique on this machine.
-token="$tag"_`date -u +%FT%TZ | tr -d :-`_$$
 phases() {
   mktmp
   trap_tmp/level_1
@@ -47,19 +46,6 @@ usercode() {
     source_ "$dir"/env \
     # lxc_ \
     exec_ ./run "$@"
-}
-# Create staging area and set a trap to ensure its removal.
-tmp() {
-  dir="$tmp"/"$tag".`date -u +%FT%TZ`.$$
-  mkdir -p "`dirname "$dir"`"
-  mkdir "$dir" # Fail if dir exists.
-  trap 'case $?/$rm0/$rm1 in
-          0/true/*)      rm -rf "$dir" ;;
-          [1-9]*/*/true) rm -rf "$dir" ;;
-        esac' EXIT
-  trap 'exit 2' HUP INT QUIT BUS SEGV PIPE TERM
-  cd "$dir"
-  dir="`pwd -P`" # Update staging directory with absolute path.
 }
 # Unpack any preamble material -- lib, env and run
 preamble() {
