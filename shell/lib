@@ -15,8 +15,10 @@ defaults() {
   : ${prefix:=arx}
   : ${token:=`time_and_pid "$flat_token"`}
   : ${tag:=${prefix:+${prefix}_}$token}
-  : ${screen:=`tag`}
-  : ${tmp_dir:=$tmp/$tag}
+  : ${screen:=$tag}
+  : ${dir:=$tmp/$tag}
+  : ${work_dir:=$dir/cwd}
+  pwd="`pwd -P`"
   "$@"
 }
 
@@ -55,16 +57,15 @@ screen_setup() {
   if ! $screen_setup
   then
     ! { screen -ls | fgrep -q "$screen" ;} ||
-    err 'screen_setup: screen collision!'
-    screen_S -dm -ln sleep 2
-    screen_setup=true
+    err 'screen_setup: Screen collision!'
+    screen_S -dm -ln sleep 2 || err 'screen_setup: Failed to init a screen.'
     screen_S -X eval 'screen 1 sleep 1' 'select 0' kill "$@"
+    screen_setup=true
   fi
 }
 
-# Launch command in initialized screen, after calling back in to this library
-# to reset the working directory (since the screen is running in /).
-screen_() {
+# Launch command in initialized screen.
+screen_run() {
   screen_setup
   screen_S -X screen 0 "$@"
   screen_S -X eval 'select 1' kill
@@ -81,7 +82,7 @@ curl_archive() {
     tar) tar -x ;;
     tgz) tar -xz ;;
     tbz) tar -jz ;;
-    *)   err 'Unrecognized archive type token.' ;;
+    *)   err 'curl_archive: Unrecognized archive type token.' ;;
   esac
   shift ; shift
   "$@"
@@ -110,37 +111,26 @@ canonical_path() {
 }
 
 
-# Generates a tag for this process from the label and some random bytes.
-# Subcommands that need a unique resource -- for example, a screen label --
-# are very likely to get something unique this way; but they should always
-# check it and fail if (by chance) another process has already taken it.
-tag() {
-  if [ ! -n "${tag:-}" ]
-  then
-    : ${label:=arx}
-    tag="$label".`hexdump -n8 -e '"%08x-%08x"' < /dev/urandom`
-  fi
-  out "$tag"
-}
-
-
-# Have to wrap cd so we can change the directory within the context of
-# external calls to the script. For example,
-#
-#  ./lib cd_ <dir> files_oe
-#
-cd_() {
+# Create the target directory and move to it.
+cd_p() {
+  mkdir -p "$1"
   cd "$1"
   shift
   "$@"
 }
 
-# Set a trap to remove the tmp_dir.
+# Return to the start directory.
+popd_() {
+  cd "$pwd"
+  "$@"
+}
+
+# Set a trap to remove the argument directory.
 trap_tmp=
-trap_tmp() {
+trap_on() {
   [ ! "${trap_tmp:-}" ] ||
-  err 'trap_tmp: var trap_tmp already in use! trap_tmp called twice????!!!?!?'
-  trap_tmp="$tmp_dir"
+  err 'trap_on: Var trap_tmp already in use! Was trap_on called twice???!!?!'
+  trap_tmp="$1"
   trap 'case $?/$rm0/$rm1 in
           0/true/*)      rm -rf "$trap_tmp" ;;
           [1-9]*/*/true) rm -rf "$trap_tmp" ;;
@@ -150,12 +140,17 @@ trap_tmp() {
        # here because user code is always called behind exec.
 }
 
+# Disable the directory removal trap.
+trap_off() {
+  trap - EXIT HUP INT QUIT BUS SEGV PIPE TERM
+}
+
 # Create staging area and set a trap to ensure its removal.
 tmp() {
-  mkdir -p "`dirname "$tmp_dir"`"
-  mkdir "$tmp_dir" # Fail if dir exists.
-  cd "$tmp_dir"
-  tmp_dir="`pwd -P`" # Update staging directory with absolute path.
+  mkdir -p "`dirname "$dir"`"
+  mkdir "$dir" # Fail if dir exists.
+  cd "$dir"
+  dir="`pwd -P`" # Update staging directory with absolute path.
   trap_tmp "$@"
 }
 
