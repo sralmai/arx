@@ -74,14 +74,36 @@ direct Executor{..} = case detach,  in
            libInner "meta_archives",
            libInner "popd_",
            libInner "cd_p", Sh.VarVal [Left "work_dir"],
-           libInner "early_archives",
+           libInner "early_sources",
            libInner "trap_off", -- Remove trap since we are about to exit.
            libOuter "screen_run",
            libInner "trap_on", Sh.VarVal [Left "dir"],
            libInner "logger_",
-           libInner "late_archives",
+           libInner "late_sources",
            -- env
            -- exec
+
+  [ if tmp_ then [libInner "tmp"] else [],
+    if tmp_ then [libInner "trap_on", Sh.VarVal [Left "dir"]] else [],
+    maybe [] setup detach,
+    if tmp_ then [libInner "meta_archives"] else [], -- May be unnecessary.
+    [libInner "popd_", libInner "cd_p", Sh.VarVal [Left "work_dir"],
+    [libInner "early_sources"],
+    if tmp_ then [libInner "trap_off"] else [], -- Remove trap since we are about to exit.
+    -- maybe [] goBehind detach,
+    [] |> do detach <- detach
+             goBehind detach,
+    -- User wrapper. Flock and other things.
+    maybe [] (const [libInner "trap_on", Sh.VarVal [Left "dir"]]) detach,
+    maybe [] pipes redirect,
+    [libInner "late_sources"],
+           -- env
+           -- exec
+    ]
+
+
+|> :: t -> Maybe t -> t
+(|>) t = maybe t id
 
   --tag :: LDHName
  -- tmp :: TMP
@@ -99,7 +121,10 @@ tmpVars TMP{..} = Sh.VarVal . (:[]) . Right . val <$>
 class Compile t where compile :: t -> [TOK]
 
 lib :: Bool -> Sh.VarVal -> TOK
-lib b s = CMD (Lib b libPath) s
+lib b = CMD (Lib b libPath)
+
+external :: Sh.VarVal -> TOK
+external  = CMD External
 
 libInner = lib False
 libOuter = lib True
