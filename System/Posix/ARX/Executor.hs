@@ -30,13 +30,20 @@ data Executor = Executor
 executorDefaults = Executor { tag="arx", tmp=tmpDefaults, dir=Nothing
                             , redirect=Nothing, detach=Nothing }
 
-data Detach = Screen -- TODO: add  | TMUX | NoHUP
-instance Compiled Detach where
-  compile Screen = [CMD lib "screen_setup", CMD lib "screen_"]
+data Detach = Screen
+
+setup :: Detach -> [TOK]
+setup Screen = [libInner "screen_setup"]
+
+enter :: Detach -> [TOK]
+enter Screen = [libInner "screen_run"]
+
 
 data Redirect = Logger (Maybe CString)
-instance Compiled Redirect where
-  compile (Logger _) = [CMD lib "logger_"]
+
+pipes :: Redirect -> [TOK]
+pipes (Logger _) = [CMD lib "logger_"]
+
 
 data TMP = TMP { path :: Path -- ^ Directory in which to create tmp dirs. The
                               --   default is @/tmp@.
@@ -57,28 +64,21 @@ tmpDefaults = TMP "/tmp" True True
 
 -- | Translate an Executor to tokens in preparation to joining it with env (if
 --   used) and...
-direct :: Executor -> [TOK]
-direct Executor{..} = case detach,  in
-  Just Screen -> [ libInner "screen_setup",
-                   libInner "early_files",
-  Nothing -> mconcat [ [CMD lib "tmpx"],
-                       maybe [] ((++[CMD lib "trap_dot"]) . compile) detach,
-                       maybe [] compile redirect ]
- where
-
+compile :: Bool -> Executor -> [TOK]
+compile tmp_ Executor{..} = mconcat
   [ tmp_ ?> [libInner "tmp"]
   , tmp_ ?> [libInner "trap_on", Sh.VarVal [Left "dir"]]
   , [  ] |> (setup <$> detach)
   , tmp_ ?> [libInner "meta_archives"]
   ,         [libInner "popd_", libInner "cd_p", Sh.VarVal [Left "work_dir"]
   ,         [libInner "archives"]
+  ,         [libInner "interactive_sources"]
   , tmp_ ?> [libInner "trap_off"] -- Remove trap since we are about to exit.
   , [  ] |> (enter <$> detach)
-    -- User wrapper. Flock and other things.
+    -- [ User wrapper and additional wrappers, like flock and LXC, go here. ]
+    -- [ Below the wrappers, we reload the shell library and run the task. ]
   , [  ] |> (detach >> Just [libInner "trap_on", Sh.VarVal [Left "dir"]])
   , [  ] |> (pipes <$> redirect)
-  ,         [libInner "interactive_sources"]
-  , [  ] |> (reallyDetach <$> detach)
   ,         [libInner "background_sources"]
            -- env
            -- exec
