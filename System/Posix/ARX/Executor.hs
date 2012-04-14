@@ -65,45 +65,31 @@ direct Executor{..} = case detach,  in
                        maybe [] ((++[CMD lib "trap_dot"]) . compile) detach,
                        maybe [] compile redirect ]
  where
-  screen_and_logger_with_tmp = do
-    Screen   <- detach
-    Logger _ <- redirect
-    Just [ libInner "tmp",
-           libInner "trap_on", Sh.VarVal [Left "dir"],
-           libInner "screen_setup",
-           libInner "meta_archives",
-           libInner "popd_",
-           libInner "cd_p", Sh.VarVal [Left "work_dir"],
-           libInner "early_sources",
-           libInner "trap_off", -- Remove trap since we are about to exit.
-           libOuter "screen_run",
-           libInner "trap_on", Sh.VarVal [Left "dir"],
-           libInner "logger_",
-           libInner "late_sources",
-           -- env
-           -- exec
 
-  [ if tmp_ then [libInner "tmp"] else [],
-    if tmp_ then [libInner "trap_on", Sh.VarVal [Left "dir"]] else [],
-    maybe [] setup detach,
-    if tmp_ then [libInner "meta_archives"] else [], -- May be unnecessary.
-    [libInner "popd_", libInner "cd_p", Sh.VarVal [Left "work_dir"],
-    [libInner "early_sources"],
-    if tmp_ then [libInner "trap_off"] else [], -- Remove trap since we are about to exit.
-    -- maybe [] goBehind detach,
-    [] |> do detach <- detach
-             goBehind detach,
+  [ tmp_ ?> [libInner "tmp"]
+  , tmp_ ?> [libInner "trap_on", Sh.VarVal [Left "dir"]]
+  , [  ] |> (setup <$> detach)
+  , tmp_ ?> [libInner "meta_archives"]
+  ,         [libInner "popd_", libInner "cd_p", Sh.VarVal [Left "work_dir"]
+  ,         [libInner "archives"]
+  , tmp_ ?> [libInner "trap_off"] -- Remove trap since we are about to exit.
+  , [  ] |> (enter <$> detach)
     -- User wrapper. Flock and other things.
-    maybe [] (const [libInner "trap_on", Sh.VarVal [Left "dir"]]) detach,
-    maybe [] pipes redirect,
-    [libInner "late_sources"],
+  , [  ] |> (detach >> Just [libInner "trap_on", Sh.VarVal [Left "dir"]])
+  , [  ] |> (pipes <$> redirect)
+  , [libInner "interactive_sources"]
+  , [  ] |> (reallyDetach <$> detach)
+  , [libInner "background_sources"]
            -- env
            -- exec
-    ]
+  ]
 
 
 |> :: t -> Maybe t -> t
 (|>) t = maybe t id
+
+?> :: (MonadPlus m) => Bool -> m t -> m t
+bool ?> m = guard bool >> m
 
   --tag :: LDHName
  -- tmp :: TMP
