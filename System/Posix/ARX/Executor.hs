@@ -77,9 +77,9 @@ direct Executor{..} = case detach,  in
     -- User wrapper. Flock and other things.
   , [  ] |> (detach >> Just [libInner "trap_on", Sh.VarVal [Left "dir"]])
   , [  ] |> (pipes <$> redirect)
-  , [libInner "interactive_sources"]
+  ,         [libInner "interactive_sources"]
   , [  ] |> (reallyDetach <$> detach)
-  , [libInner "background_sources"]
+  ,         [libInner "background_sources"]
            -- env
            -- exec
   ]
