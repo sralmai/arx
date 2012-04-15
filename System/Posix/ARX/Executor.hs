@@ -1,10 +1,16 @@
-
+{-# LANGUAGE RecordWildCards
+  #-}
 module System.Posix.ARX.Executor where
+
+import Control.Applicative
+import Control.Monad
+import Data.Monoid
 
 import System.Posix.ARX.Composer
 import System.Posix.ARX.LDHName
 import qualified System.Posix.ARX.Sh as Sh
 import System.Posix.ARX.Strings
+
 
 -- | The 'Executor' unpacks and runs a 'Task'. In @ARX@, the executor is a
 --   shell script with the task compiled in to it. Everything that represents
@@ -27,8 +33,8 @@ data Executor = Executor
                            --   screen). The default is not to detach.
   }
 -- | Executor with defaults set.
-executorDefaults = Executor { tag="arx", tmp=tmpDefaults, dir=Nothing
-                            , redirect=Nothing, detach=Nothing }
+executor = Executor { tag="arx", dir=(Left tmp)
+                    , redirect=Nothing, detach=Nothing }
 
 data Detach = Screen
 
@@ -42,7 +48,7 @@ enter Screen = [libInner "screen_run"]
 data Redirect = Logger (Maybe CString)
 
 pipes :: Redirect -> [TOK]
-pipes (Logger _) = [CMD lib "logger_"]
+pipes (Logger _) = [libInner "logger_"]
 
 
 data TMP = TMP { path :: Path -- ^ Directory in which to create tmp dirs. The
@@ -52,7 +58,7 @@ data TMP = TMP { path :: Path -- ^ Directory in which to create tmp dirs. The
                , rmOnFailure :: Bool -- ^ Remove tmp dir on failure?
                                      --   The default is to do so.
                }
-tmpDefaults = TMP "/tmp" True True
+tmp = TMP "/tmp" True True
 
 -- TODO: data LXC = LXC ...
 
@@ -64,51 +70,44 @@ tmpDefaults = TMP "/tmp" True True
 
 -- | Translate an Executor to tokens in preparation to joining it with env (if
 --   used) and...
-compile :: Bool -> Executor -> [TOK]
-compile tmp_ Executor{..} = mconcat
-  [ tmp_ ?> [libInner "tmp"]
-  , tmp_ ?> [libInner "trap_on", Sh.VarVal [Left "dir"]]
-  , [  ] |> (setup <$> detach)
-  , tmp_ ?> [libInner "meta_archives"]
-  ,         [libInner "popd_", libInner "cd_p", Sh.VarVal [Left "work_dir"]
-  ,         [libInner "archives"]
-  ,         [libInner "interactive_sources"]
-  , tmp_ ?> [libInner "trap_off"] -- Remove trap since we are about to exit.
-  , [  ] |> (enter <$> detach)
-    -- [ User wrapper and additional wrappers, like flock and LXC, go here. ]
-    -- [ Below the wrappers, we reload the shell library and run the task. We
-    --   write the shell library literally in to a shell command line with -c,
-    --   so we aren't forced to drop a file if it's not necessary. ]
-    -- [ Below the wrappers, we reload the shell library and run the task. ]
-  , [  ] |> (detach >> Just [libInner "trap_on", Sh.VarVal [Left "dir"]])
-  , [  ] |> (pipes <$> redirect)
-  ,         [libInner "background_sources"]
-    -- All of this is wrapped around a call to env which is wrapped
-    -- around a call to:
-    --   sh -c 'exec "$@"' <first word in user command> <user command> "$@"
-  ]
+compile :: Executor -> [TOK]
+compile Executor{..} = mconcat
+   [ [libInner "tmp"]                                      --?  withTmp
+   , [libInner "trap_on", dirVar]                          --?  withTmp
+   , setup <$> detach                                      --|  []
+   , [libInner "meta_archives"]                            --?  withTmp
+   , [libInner "popd_", libInner "cd_p", cwdVar]
+   , [libInner "archives"]
+   , [libInner "interactive_sources"]
+   , [libInner "trap_off"]                                 --?  withTmp
+   , enter <$> detach                                      --|  []
+     -- [ User wrapper and additional wrappers, like flock and LXC, go here. ]
+     -- [ Below the wrappers, we reload the shell library and run the task. We
+     --   write the shell library literally in to a shell command line with -c,
+     --   so we aren't forced to drop a file if it's not necessary. ]
+     -- [ Below the wrappers, we reload the shell library and run the task. ]
+   , detach >> Just [libInner "trap_on", dirVar]           --|  []
+   , pipes <$> redirect                                    --|  []
+   , [libInner "background_sources"]
+   ] -- All of this is wrapped around a call to env which is wrapped
+     -- around a call to:
+     --   sh -c 'exec "$@"' <first word in user command> <user command> "$@"
+ where
+  infixl 0 --|, --?
+  (--|) m t = maybe t id m
+  (--?) m bool = guard bool >> m
+  dirVar = ARG (Sh.VarVal [Left "dir"])
+  cwdVar = ARG (Sh.VarVal [Left "work_dir"])
+  withTmp = case dir of Left _  -> True
+                        Right _ -> False
 
-
-|> :: t -> Maybe t -> t
-(|>) t = maybe t id
-
-?> :: (MonadPlus m) => Bool -> m t -> m t
-bool ?> m = guard bool >> m
-
-  --tag :: LDHName
- -- tmp :: TMP
--- dir :: Maybe Path
--- redirect :: Maybe Redirect
- -- detach :: Maybe Detach
 
 tmpVars :: TMP -> [Sh.VarVal]
-tmpVars TMP{..} = Sh.VarVal . (:[]) . Right . val <$>
+tmpVars TMP{..} = Sh.VarVal . (:[]) . Right . norm <$>
   [ mappend "tmp=" (bytes path)
   , if rmOnSuccess then "rm0=true" else "rm0=false"
   , if rmOnFailure then "rm1=true" else "rm1=false" ]
 
-
-class Compile t where compile :: t -> [TOK]
 
 lib :: Bool -> Sh.VarVal -> TOK
 lib b = CMD (Lib b libPath)
