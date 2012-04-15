@@ -7,12 +7,10 @@ import qualified System.Posix.ARX.Sh as Sh
 import System.Posix.ARX.Strings
 
 -- | The 'Executor' unpacks and runs a 'Task'. In @ARX@, the executor is a
---   shell script with the task compiled in to it. As a first step, the
---   script always creates a temporary directory to unpack its libraries; a
---   task without a directory set will execute in this temporary directory.
---   Everything that represents an extension to the basic model of a
---   reproducible process hierarchy with files and environment Outerbles is
---   captured by the 'Executor' data structure.
+--   shell script with the task compiled in to it. Everything that represents
+--   an extension to the basic model of a reproducible process hierarchy with
+--   files and environment Outerbles is captured by the 'Executor' data
+--   structure.
 data Executor = Executor
   { tag :: LDHName -- ^ A short prefix used for screens, temporary directories
                    --   and other resources allocated by @ARX@. The default
