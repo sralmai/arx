@@ -42,7 +42,7 @@ setup :: Detach -> [TOK]
 setup Screen = [libInner "screen_setup"]
 
 enter :: Detach -> [TOK]
-enter Screen = [libInner "screen_run"]
+enter Screen = [libOuter "screen_run"]
 
 
 data Redirect = Logger (Maybe CString)
@@ -70,8 +70,8 @@ tmp = TMP "/tmp" True True
 
 -- | Translate an Executor to tokens in preparation to joining it with env (if
 --   used) and...
-compile :: Executor -> [TOK]
-compile Executor{..} = mconcat
+tokens :: Executor -> [TOK]
+tokens Executor{..} = mconcat
    [ [libInner "tmp"]                                      --?  withTmp
    , [libInner "trap_on", dirVar]                          --?  withTmp
    , setup <$> detach                                      --|  []
@@ -79,7 +79,7 @@ compile Executor{..} = mconcat
    , [libInner "popd_", libInner "cd_p", cwdVar]
    , [libInner "archives"]
    , [libInner "interactive_sources"]
-   , [libInner "trap_off"]                                 --?  withTmp
+   , detach >> Just [libInner "trap_off"]          --| []  --?  withTmp
    , enter <$> detach                                      --|  []
      -- [ User wrapper and additional wrappers, like flock and LXC, go here. ]
      -- [ Below the wrappers, we reload the shell library and run the task. We
