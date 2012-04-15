@@ -18,8 +18,10 @@ data Executor = Executor
                    --   and other resources allocated by @ARX@. The default
                    --   is @arx@. The names are constrained by the
                    --   letter-digit-hypen rule common to DNS.
-  , tmp :: TMP -- ^ Temporary directory creation and removal settings.
-  , dir :: Maybe Path -- ^ Directory to run task in, if a change is desired.
+  , dir :: Either TMP Path -- ^ Directory specification: either create a
+                           --   temporary directory using the desired settings
+                           --   or change to a directory in certain place in
+                           --   the filesystem hierarchy.
   , redirect :: Maybe Redirect -- ^ Redirection of @STDERR@ and @STDOUT@. The
                                --   default is not to redirect.
   , detach :: Maybe Detach -- ^ Make it possible for the process to run with
