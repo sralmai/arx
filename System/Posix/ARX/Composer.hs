@@ -64,22 +64,21 @@ instance IsString TOK where
   fromString                 =  CMD External . fromString
 
 
-compile                     ::  ExecV -> [Sh.VarVal]
-compile (ExecV tokens)       =  snd (foldr f (Sh True, []) tokens)
+compile                     ::  CMD -> ExecV -> [Sh.VarVal]
+compile ctx (ExecV tokens)   =  worker ctx tokens
  where
-  f                         ::  TOK -> (CMD, [Sh.VarVal]) -> (CMD, [Sh.VarVal])
-  f (ARG arg) (t, args)      =  (t, arg:args)
-  f (CMD t arg) (t', args)   =  (t, args')
-   where
-    ba:ck:to:sh:[]           =  "/bin/sh":"-c":"\"$@\"":"sh":[]
-    args' = case t of
-      Sh _     | Sh False    <- t'         -> arg:args
-               | otherwise                 -> ba:ck:to:sh:arg:args
-      Lib _ x  | Sh False    <- t'         -> "exec":x:arg:args
-               | Lib False y <- t', x /= y -> "exec":x:arg:args
-               | Lib False y <- t', x == y -> arg:args
-               | otherwise                 -> x:arg:args
-      External | Sh False    <- t'         -> "exec":arg:args
-               | Lib False _ <- t'         -> "exec":arg:args
-               | otherwise                 -> arg:args
+  worker _ []                =  []
+  worker t (ARG arg:rest)    =  arg : worker t  rest
+  worker t (CMD t' arg:rest) =  case t' of
+    Sh _     | Sh False     <- t         -> arg:recurse
+             | otherwise                 -> ba:ck:to:sh:arg:recurse
+    Lib _ x  | Sh False     <- t         -> "exec":x:arg:recurse
+             | Lib False y  <- t, x /= y -> "exec":x:arg:recurse
+             | Lib False y  <- t, x == y -> arg:recurse
+             | otherwise                 -> x:arg:recurse
+    External | Sh False     <- t         -> "exec":arg:recurse
+             | Lib False _  <- t         -> "exec":arg:recurse
+             | otherwise                 -> arg:recurse
+   where recurse             =  worker t' rest
+         ba:ck:to:sh:[]      =  "/bin/sh":"-c":"\"$@\"":"sh":[]
 
