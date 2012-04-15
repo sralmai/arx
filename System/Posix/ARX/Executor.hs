@@ -76,12 +76,16 @@ compile tmp_ Executor{..} = mconcat
   , tmp_ ?> [libInner "trap_off"] -- Remove trap since we are about to exit.
   , [  ] |> (enter <$> detach)
     -- [ User wrapper and additional wrappers, like flock and LXC, go here. ]
+    -- [ Below the wrappers, we reload the shell library and run the task. We
+    --   write the shell library literally in to a shell command line with -c,
+    --   so we aren't forced to drop a file if it's not necessary. ]
     -- [ Below the wrappers, we reload the shell library and run the task. ]
   , [  ] |> (detach >> Just [libInner "trap_on", Sh.VarVal [Left "dir"]])
   , [  ] |> (pipes <$> redirect)
   ,         [libInner "background_sources"]
-           -- env
-           -- exec
+    -- All of this is wrapped around a call to env which is wrapped
+    -- around a call to:
+    --   sh -c 'exec "$@"' <first word in user command> <user command> "$@"
   ]
 
 
