@@ -68,7 +68,7 @@ compile                     ::  CMD -> ExecV -> [Sh.VarVal]
 compile ctx (ExecV tokens)   =  worker ctx tokens
  where
   worker _ []                =  []
-  worker t (ARG arg:rest)    =  arg : worker t  rest
+  worker t (ARG arg:rest)    =  arg : worker t rest
   worker t (CMD t' arg:rest) =  case t' of
     Sh _     | Sh False     <- t         -> arg:recurse
              | otherwise                 -> ba:ck:to:sh:arg:recurse
