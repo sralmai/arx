@@ -1,4 +1,5 @@
 {-# LANGUAGE RecordWildCards
+           , TupleSections
   #-}
 module System.Posix.ARX.Executor where
 
@@ -32,6 +33,12 @@ data Executor = Executor
                            --   the terminal detached (for example, with
                            --   screen). The default is not to detach.
   }
+instance Vars Executor where
+  variables Executor{..} = mconcat
+    [ case dir of Right path -> [("work_dir", p2v path)]
+                  Left tmp   -> variables tmp
+    , variables <$> redirect   --| []
+    ]
 -- | Executor with defaults set.
 executor = Executor { tag="arx", dir=(Left tmp)
                     , redirect=Nothing, detach=Nothing }
@@ -46,6 +53,9 @@ enter Screen = [libOuter "screen_run"]
 
 
 data Redirect = Logger (Maybe CString)
+instance Vars Redirect where
+  variables (Logger syslogTag) =
+    ((:[]) . ("syslog_tag",) . Sh.Val <$> syslogTag) --| []
 
 pipes :: Redirect -> [TOK]
 pipes (Logger _) = [libInner "logger_"]
@@ -58,20 +68,18 @@ data TMP = TMP { path :: Path -- ^ Directory in which to create tmp dirs. The
                , rmOnFailure :: Bool -- ^ Remove tmp dir on failure?
                                      --   The default is to do so.
                }
+instance Vars TMP where
+  variables TMP{..} = [ ("tmp", p2v path)
+                      , ("rm0", b2v rmOnSuccess)
+                      , ("rm1", b2v rmOnFailure)]
 tmp = TMP "/tmp" True True
 
 -- TODO: data LXC = LXC ...
 
--- How to determine whether or not to use tmpx:
---  * If explicitly requested, use it.
---  * If a directory is not set, use it.
---  * Compile the executor without tmpx and if we have to call back in to the
---    library, add tmpx statements and recompile.
-
--- | Translate an Executor to tokens in preparation to joining it with env (if
---   used) and...
-tokens :: Executor -> [TOK]
-tokens Executor{..} = mconcat
+-- | Translate an Executor to tokens, forming a command line wrapper, which is
+--   wrapped around a call to @env@ to launch the user command.
+wrapper :: Executor -> [TOK]
+wrapper Executor{..} = mconcat
    [ [libInner "tmp"]                                      --?  withTmp
    , [libInner "trap_on", dirVar]                          --?  withTmp
    , setup <$> detach                                      --|  []
@@ -93,20 +101,19 @@ tokens Executor{..} = mconcat
      -- around a call to:
      --   sh -c 'exec "$@"' <first word in user command> <user command> "$@"
  where
-  infixl 0 --|, --?
-  (--|) m t = maybe t id m
-  (--?) m bool = guard bool >> m
   dirVar = ARG (Sh.VarVal [Left "dir"])
   cwdVar = ARG (Sh.VarVal [Left "work_dir"])
   withTmp = case dir of Left _  -> True
                         Right _ -> False
 
 
-tmpVars :: TMP -> [Sh.VarVal]
-tmpVars TMP{..} = Sh.VarVal . (:[]) . Right . norm <$>
-  [ mappend "tmp=" (bytes path)
-  , if rmOnSuccess then "rm0=true" else "rm0=false"
-  , if rmOnFailure then "rm1=true" else "rm1=false" ]
+
+infixl 0 --|, --?
+(--|) m t = maybe t id m
+(--?) m bool = guard bool >> m
+
+p2v (Path c) = Sh.Val c
+b2v b = if b then "true" else "false"
 
 
 lib :: Bool -> Sh.VarVal -> TOK
@@ -123,4 +130,9 @@ libOuter = lib True
 libPath :: Sh.VarVal
 libPath  = Sh.VarVal [Left "dir", Right "/lib"]
 
+
+-- | Many datastructures in this module are translated to shell functions that
+--   can be controlled through certain variables. This function creates shell
+--   assignments that set those variables.
+class Vars t where variables :: t -> [(Sh.Var, Sh.Val)]
 
