@@ -26,11 +26,11 @@ instance Norm Env          where norm b | elem '=' c = Env c
                                   where CString c = norm b
 
 -- | A UNIX path is a non-empty C string.
-newtype Path = Path ByteString deriving (Eq, Ord, Show)
+newtype Path = Path CString deriving (Eq, Ord, Show)
 instance IsString Path where fromString = fromJust . maybeFromString
-instance Bytes Path    where bytes (Path s) = s
+instance Bytes Path    where bytes (Path s) = bytes s
 instance Norm Path     where norm b = if "" == c then Path "." else Path c
-                              where CString c = norm b
+                              where c = norm b
 
 class Norm t  where norm  :: ByteString -> t
 class Bytes t where bytes :: t -> ByteString
