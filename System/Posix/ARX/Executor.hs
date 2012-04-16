@@ -37,7 +37,7 @@ instance Vars Executor where
   variables Executor{..} = mconcat
     [ case dir of Right path -> [("work_dir", p2v path)]
                   Left tmp   -> variables tmp
-    , variables <$> redirect   --| []
+    , maybe [] variables redirect
     ]
 -- | Executor with defaults set.
 executor = Executor { tag="arx", dir=(Left tmp)
@@ -55,7 +55,7 @@ enter Screen = [libOuter "screen_run"]
 data Redirect = Logger (Maybe CString)
 instance Vars Redirect where
   variables (Logger syslogTag) =
-    ((:[]) . ("syslog_tag",) . Sh.Val <$> syslogTag) --| []
+    maybe [] ((:[]) . ("syslog_tag",) . Sh.Val) syslogTag
 
 pipes :: Redirect -> [TOK]
 pipes (Logger _) = [libInner "logger_"]
@@ -101,6 +101,9 @@ wrapper Executor{..} = mconcat
      -- around a call to:
      --   sh -c 'exec "$@"' <first word in user command> <user command> "$@"
  where
+  infixl 0 --|, --?
+  (--|) m t = maybe t id m
+  (--?) m bool = guard bool >> m
   dirVar = ARG (Sh.VarVal [Left "dir"])
   cwdVar = ARG (Sh.VarVal [Left "work_dir"])
   withTmp = case dir of Left _  -> True
@@ -108,9 +111,6 @@ wrapper Executor{..} = mconcat
 
 
 
-infixl 0 --|, --?
-(--|) m t = maybe t id m
-(--?) m bool = guard bool >> m
 
 p2v (Path c) = Sh.Val c
 b2v b = if b then "true" else "false"
