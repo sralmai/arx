@@ -80,26 +80,26 @@ tmp = TMP "/tmp" True True
 --   wrapped around a call to @env@ to launch the user command.
 wrapper :: Executor -> [TOK]
 wrapper Executor{..} = mconcat
-   [ [libInner "tmp"]                                      --?  withTmp
-   , [libInner "trap_on", dirVar]                          --?  withTmp
-   , setup <$> detach                                      --|  []
-   , [libInner "meta_archives"]                            --?  withTmp
-   , [libInner "popd_", libInner "cd_p", cwdVar]
-   , [libInner "archives"]
-   , [libInner "interactive_sources"]
-   , detach >> Just [libInner "trap_off"]          --| []  --?  withTmp
-   , enter <$> detach                                      --|  []
-     -- [ User wrapper and additional wrappers, like flock and LXC, go here. ]
-     -- [ Below the wrappers, we reload the shell library and run the task. We
-     --   write the shell library literally in to a shell command line with -c,
-     --   so we aren't forced to drop a file if it's not necessary. ]
-     -- [ Below the wrappers, we reload the shell library and run the task. ]
-   , detach >> Just [libInner "trap_on", dirVar]           --|  []
-   , pipes <$> redirect                                    --|  []
-   , [libInner "background_sources"]
-   ] -- All of this is wrapped around a call to env which is wrapped
-     -- around a call to:
-     --   sh -c 'exec "$@"' <first word in user command> <user command> "$@"
+  [ [libInner "tmp"]                                       --?  withTmp
+  , [libInner "trap_on", dirVar]                           --?  withTmp
+  , setup <$> detach                                       --|  []
+  , [libInner "meta_archives"]                             --?  withTmp
+  , [libInner "popd_", libInner "cd_p", cwdVar]
+  , [libInner "archives"]
+  , [libInner "interactive_sources"]
+  , detach >> Just [libInner "trap_off"]           --| []  --?  withTmp
+  , enter <$> detach                                       --|  []
+    -- [ User wrapper and additional wrappers, like flock and LXC, go here. ]
+    -- [ Below the wrappers, we reload the shell library and run the task. We
+    --   write the shell library literally in to a shell command line with -c,
+    --   so we aren't forced to drop a file if it's not necessary. ]
+    -- [ Below the wrappers, we reload the shell library and run the task. ]
+  , detach >> Just [libInner "trap_on", dirVar]            --|  []
+  , pipes <$> redirect                                     --|  []
+  , [libInner "background_sources"]
+  ] -- All of this is wrapped around a call to env which is wrapped
+    -- around a call to:
+    --   sh -c 'exec "$@"' <first word in user command> <user command> "$@"
  where
   infixl 0 --|, --?
   (--|) m t = maybe t id m
