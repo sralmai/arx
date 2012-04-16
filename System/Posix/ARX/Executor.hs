@@ -110,8 +110,6 @@ wrapper Executor{..} = mconcat
                         Right _ -> False
 
 
-
-
 p2v (Path c) = Sh.Val c
 b2v b = if b then "true" else "false"
 
