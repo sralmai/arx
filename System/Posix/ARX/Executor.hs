@@ -71,7 +71,7 @@ data TMP = TMP { path :: Path -- ^ Directory in which to create tmp dirs. The
 instance Vars TMP where
   variables TMP{..} = [ ("tmp", p2v path)
                       , ("rm0", b2v rmOnSuccess)
-                      , ("rm1", b2v rmOnFailure)]
+                      , ("rm1", b2v rmOnFailure) ]
 tmp = TMP "/tmp" True True
 
 -- TODO: data LXC = LXC ...
