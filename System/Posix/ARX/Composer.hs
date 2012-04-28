@@ -1,10 +1,13 @@
 {-# LANGUAGE OverloadedStrings
+           , StandaloneDeriving
            , PatternGuards #-}
 
 module System.Posix.ARX.Composer where
 
 import Data.ByteString.Char8 (ByteString)
 import Data.String
+
+import Data.LabeledTree
 
 import qualified System.Posix.ARX.Sh as Sh
 
@@ -44,14 +47,21 @@ data ExecV                   =  ExecV [TOK]
 data CMD
   = Sh { external :: Bool
          -- ^ Some @sh@ built-ins, like @exec@, put us back in an external
-         --   context. This may apply to lib calls, as well.
+         --   context. This may apply to lib and inline calls, as well.
        }
+  | Inline { external :: Bool
+           , code :: Forest Sh.Var Sh.Val -- ^ Function definitions and
+                                          --   their dependencies, which are
+                                          --   inlined in an sh -c ... call.
+           }
   | Lib { external :: Bool
-          -- ^ Some @sh@ built-ins, like @exec@, put us back in an external
-          --   context. This may apply to lib calls, as well.
-        , source :: Sh.VarVal }
+        , source :: Sh.VarVal -- ^ File to call into for this library.
+        }
   | External
  deriving (Eq, Ord, Show)
+
+deriving instance (Ord e, Ord n) => Ord (e ::> n)
+deriving instance (Ord e, Ord n) => Ord (Tree e n)
 
 -- | A token in an execution vector is either a command (which we assume to be
 --   wrapped by commands further up the chain) or a simple string argument.
