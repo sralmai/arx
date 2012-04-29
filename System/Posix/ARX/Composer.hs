@@ -5,6 +5,7 @@
 module System.Posix.ARX.Composer where
 
 import Data.ByteString.Char8 (ByteString)
+import Data.Set
 import Data.String
 
 import qualified System.Posix.ARX.Sh as Sh
@@ -59,9 +60,10 @@ data ExecutionContext
          --   context. This may apply to lib and inline calls, as well.
        }
   | Inline { external :: Bool
-           , code :: [Sh.Val] -- ^ Code to inline, by wrapping with
-                              --   @sh -c '...'@. All inlined segments will be
-                              --   separated by newlines.
+           , code :: Set Sh.Val -- ^ A set of declarations to inline. These
+                                --   will be output in /arbitrary order/ and
+                                --   a little postamble to call "$@" will
+                                --   added.
            }
   | Lib { external :: Bool
         , source :: Sh.VarVal -- ^ File to call into for this library.
@@ -107,7 +109,8 @@ merge (CMD ctx' v) (Nothing,  vs) = (Just ctx', v:vs)
 merge (CMD ctx' v) (Just ctx, vs)
   | merging   = (Just ctx'', v : vs)
   | otherwise = (Just ctx',  v : finalize ctx_vs)
- where merging = ...
+ where merging = undefined
+       ctx''   = undefined
 
 -- | Inline whatever setup is needed for an execution context to function.
 finalize :: (Maybe ExecutionContext, [Sh.VarVal]) -> [Sh.VarVal]
