@@ -1,5 +1,4 @@
 {-# LANGUAGE OverloadedStrings
-           , StandaloneDeriving
            , PatternGuards #-}
 
 module System.Posix.ARX.Composer where
