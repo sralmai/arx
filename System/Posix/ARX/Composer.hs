@@ -7,8 +7,6 @@ module System.Posix.ARX.Composer where
 import Data.ByteString.Char8 (ByteString)
 import Data.String
 
-import Data.LabeledTree
-
 import qualified System.Posix.ARX.Sh as Sh
 
 
@@ -25,6 +23,17 @@ data ExecV                   =  ExecV [TOK]
 --
 -- *  An 'Sh' command is a shell built-in that needs to be executed in a shell
 --    context.
+--
+-- *  An 'Inline' command has its code -- a shell function definition -- made
+--    available by way of wrapping it @sh -c '...'@. For example, a function
+--    @const <something>@ that prints the first argument no matter what the
+--    other arguments are might be called like this:
+--
+-- >  const a b c
+--
+--    It must be inlined like this:
+--
+-- >  sh -c 'const() { echo "$1" ;} ; "$@"' sh const a b c
 --
 -- *  A 'Lib' command requires a certain shell library to be loaded.
 --
@@ -44,15 +53,15 @@ data ExecV                   =  ExecV [TOK]
 --   call; but then the call to @env@ transfers control to a process where
 --   @/usr/bin/env@ is in core so a shell must be started and the library
 --   reloaded for the third call to a library function.
-data CMD
+data ExecutionContext
   = Sh { external :: Bool
          -- ^ Some @sh@ built-ins, like @exec@, put us back in an external
          --   context. This may apply to lib and inline calls, as well.
        }
   | Inline { external :: Bool
-           , code :: Forest Sh.Var Sh.Val -- ^ Function definitions and
-                                          --   their dependencies, which are
-                                          --   inlined in an sh -c ... call.
+           , code :: [Sh.Val] -- ^ Code to inline, by wrapping with
+                              --   @sh -c '...'@. All inlined segments will be
+                              --   separated by newlines.
            }
   | Lib { external :: Bool
         , source :: Sh.VarVal -- ^ File to call into for this library.
@@ -60,21 +69,18 @@ data CMD
   | External
  deriving (Eq, Ord, Show)
 
-deriving instance (Ord e, Ord n) => Ord (e ::> n)
-deriving instance (Ord e, Ord n) => Ord (Tree e n)
-
 -- | A token in an execution vector is either a command (which we assume to be
 --   wrapped by commands further up the chain) or a simple string argument.
 --   From a stack programming point of view, an 'ARG' is an instruction to put
 --   something on the stack while a 'CMD' performs some task and may take
 --   arguments off the stack.
-data TOK                     =  CMD CMD Sh.VarVal | ARG Sh.VarVal
+data TOK                     =  CMD ExecutionContext Sh.VarVal | ARG Sh.VarVal
  deriving (Eq, Ord, Show)
 instance IsString TOK where
   fromString                 =  CMD External . fromString
 
 
-compile                     ::  CMD -> ExecV -> [Sh.VarVal]
+compile                     ::  ExecutionContext -> ExecV -> [Sh.VarVal]
 compile ctx (ExecV tokens)   =  worker ctx tokens
  where
   worker _ []                =  []
