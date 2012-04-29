@@ -98,3 +98,34 @@ compile ctx (ExecV tokens)   =  worker ctx tokens
    where recurse             =  worker t' rest
          ba:ck:to:sh:[]      =  "/bin/sh":"-c":"\"$@\"":"sh":[]
 
+-- | Merge a token in to a vector of args which might have an execution
+--   context.
+merge :: TOK -> (Maybe ExecutionContext, [Sh.VarVal])
+      -> (Maybe ExecutionContext, [Sh.VarVal])
+merge (ARG v) ctx_vs              = (Nothing, v : finalize ctx_vs)
+merge (CMD ctx' v) (Nothing,  vs) = (Just ctx', v:vs)
+merge (CMD ctx' v) (Just ctx, vs)
+  | merging   = (Just ctx'', v : vs)
+  | otherwise = (Just ctx',  v : finalize ctx_vs)
+ where merging = ...
+
+-- | Inline whatever setup is needed for an execution context to function.
+finalize :: (Maybe ExecutionContext, [Sh.VarVal]) -> [Sh.VarVal]
+finalize (Nothing,  vs) = vs
+finalize (Just ctx, vs) = vs <<++ case ctx of
+  Sh _        | Sh False     <- t         -> arg:recurse
+              | otherwise                 -> ba:ck:to:sh:arg:recurse
+  Inline _ cs | Sh False     <- t         -> "exec":x:arg:recurse
+              | Lib False y  <- t, x /= y -> "exec":x:arg:recurse
+              | Lib False y  <- t, x == y -> arg:recurse
+              | otherwise                 -> x:arg:recurse
+  Lib _ x     | Sh False     <- t         -> "exec":x:arg:recurse
+              | Lib False y  <- t, x /= y -> "exec":x:arg:recurse
+              | Lib False y  <- t, x == y -> arg:recurse
+              | otherwise                 -> x:arg:recurse
+  External    | Sh False     <- t         -> "exec":arg:recurse
+              | Lib False _  <- t         -> "exec":arg:recurse
+              | otherwise                 -> arg:recurse
+ where (<<++)         = flip (++)
+       ba:ck:to:sh:[] = "/bin/sh":"-c":"\"$@\"":"sh":[]
+
