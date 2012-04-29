@@ -59,10 +59,11 @@ data ExecutionContext
          --   context. This may apply to lib and inline calls, as well.
        }
   | Inline { external :: Bool
-           , code :: Set Sh.Val -- ^ A set of declarations to inline. These
-                                --   will be output in /arbitrary order/ and
-                                --   a little postamble to call "$@" will
-                                --   added.
+           , code :: Set Sh.Val
+             -- ^ A set of declarations to inline. They are inlined in
+             --   /arbitrary order/ with a little postamble to call "$@". So
+             --   if they're not purely function declarations and default
+             --   settings, strange things may happen.
            }
   | Lib { external :: Bool
         , source :: Sh.VarVal -- ^ File to call into for this library.
