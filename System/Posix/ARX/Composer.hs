@@ -104,13 +104,13 @@ compile ctx (ExecV tokens)   =  worker ctx tokens
 --   context.
 merge :: TOK -> (Maybe ExecutionContext, [Sh.VarVal])
       -> (Maybe ExecutionContext, [Sh.VarVal])
-merge (ARG v) ctx_vs              = (Nothing, v : finalize ctx_vs)
-merge (CMD ctx' v) (Nothing,  vs) = (Just ctx', v:vs)
+merge (ARG v) ctx_vs              = (Nothing,   v : finalize ctx_vs)
+merge (CMD ctx' v) (Nothing,  vs) = (Just ctx', v : vs)
 merge (CMD ctx' v) (Just ctx, vs)
-  | merging   = (Just ctx'', v : vs)
-  | otherwise = (Just ctx',  v : finalize ctx_vs)
+                      | merging   = (Just ctx_, v : vs)
+                      | otherwise = (Just ctx', v : finalize ctx_vs)
  where merging = undefined
-       ctx''   = undefined
+       ctx_    = undefined
 
 -- | Inline whatever setup is needed for an execution context to function.
 finalize :: (Maybe ExecutionContext, [Sh.VarVal]) -> [Sh.VarVal]
