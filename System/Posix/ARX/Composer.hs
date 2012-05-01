@@ -116,20 +116,17 @@ merge (CMD ctx' v) (Just ctx, vs)
 -- | Inline whatever setup is needed for an execution context to function.
 finalize :: (Maybe ExecutionContext, [Sh.VarVal]) -> [Sh.VarVal]
 finalize (Nothing,  vs) = vs
-finalize (Just ctx, vs) = vs <<++ case ctx of
-  Sh _        | Sh False     <- t         -> arg:recurse
-              | otherwise                 -> ba:ck:to:sh:arg:recurse
-  Inline _ cs | Sh False     <- t         -> "exec":x:arg:recurse
-              | Lib False y  <- t, x /= y -> "exec":x:arg:recurse
-              | Lib False y  <- t, x == y -> arg:recurse
-              | otherwise                 -> x:arg:recurse
-  Lib _ x     | Sh False     <- t         -> "exec":x:arg:recurse
-              | Lib False y  <- t, x /= y -> "exec":x:arg:recurse
-              | Lib False y  <- t, x == y -> arg:recurse
-              | otherwise                 -> x:arg:recurse
-  External    | Sh False     <- t         -> "exec":arg:recurse
-              | Lib False _  <- t         -> "exec":arg:recurse
-              | otherwise                 -> arg:recurse
- where (<<++)         = flip (++)
-       ba:ck:to:sh:[] = "/bin/sh":"-c":"\"$@\"":"sh":[]
+finalize (Just ctx, vs) = case ctx of
+  Sh _                 -> ba:ck:to:sh:vs
+  Inline _ decls       -> inl:ine:d:sh:vs where inl:ine:d:sh:[] = inl decls
+  Lib _ x              -> ...:x:vs
+  External             -> vs
+ where ba:ck:to:sh:[] = "/bin/sh":"-c":"\"$@\"":"sh":[]
+       inl decls      = "/bin/sh":"-c":(cast (inline decls)):"sh":[]
+       cast           = (:[]) . Right
+
+inline :: Set Sh.Val -> Sh.Val
+inline decls = norm bytes
+ where
+  code = intercalate "\n" . (++["\"$@\""]) . bytes <$> Set.toList decls
 
