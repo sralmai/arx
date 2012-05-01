@@ -60,10 +60,11 @@ data ExecutionContext
        }
   | Inline { external :: Bool
            , code :: Set Sh.Val
-             -- ^ A set of declarations to inline. They are inlined in
-             --   /arbitrary order/ with a little postamble to call "$@". So
-             --   if they're not purely function declarations and default
-             --   settings, strange things may happen.
+             -- ^ A set of declarations to inline, one of which is likely to
+             --   be a definition of the command to be called. The declarations
+             --   are inlined in /arbitrary order/ with a little postamble to
+             --   call "$@". If they're not just function declarations and
+             --   default settings, strange things may happen.
            }
   | Lib { external :: Bool
         , source :: Sh.VarVal -- ^ File to call into for this library.
