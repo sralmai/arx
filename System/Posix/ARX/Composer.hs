@@ -101,29 +101,30 @@ compile ctx (ExecV tokens)   =  worker ctx tokens
    where recurse             =  worker t' rest
          ba:ck:to:sh:[]      =  "/bin/sh":"-c":"\"$@\"":"sh":[]
 
--- | Merge a token in to a vector of args which might have an execution
---   context.
-merge :: TOK -> (Maybe ExecutionContext, [Sh.VarVal])
-      -> (Maybe ExecutionContext, [Sh.VarVal])
-merge (ARG v) ctx_vs              = (Nothing,   v : finalize ctx_vs)
-merge (CMD ctx' v) (Nothing,  vs) = (Just ctx', v : vs)
-merge (CMD ctx' v) (Just ctx, vs)
-                      | merging   = (Just ctx_, v : vs)
-                      | otherwise = (Just ctx', v : finalize ctx_vs)
- where merging = undefined
-       ctx_    = undefined
+rollup :: TOK -> ([Sh.VarVal], Maybe (ExecutionContext, [Sh.VarVal]))
+              -> ([Sh.VarVal], Maybe (ExecutionContext, [Sh.VarVal]))
+rollup (ARG v) (vs, s) = (v:vs, s)
+rollup (CMD ctx' v) r  = case r of
+  (vs, Nothing)       -> ([], Just (ctx', vs))
+  (vs, Just (ctx, ys) -> ([], Just (ctx', vs ++ transition ctx' ctx ++ ys))
 
--- | Inline whatever setup is needed for an execution context to function.
+-- | Insert code that transitions from the first context to the second.
+transition :: ExecutionContext -> ExecutionContenx -> [Sh.VarVal]
+
+
 finalize :: (Maybe ExecutionContext, [Sh.VarVal]) -> [Sh.VarVal]
 finalize (Nothing,  vs) = vs
 finalize (Just ctx, vs) = case ctx of
   Sh _                 -> ba:ck:to:sh:vs
   Inline _ decls       -> inl:ine:d:sh:vs where inl:ine:d:sh:[] = inl decls
-  Lib _ x              -> ...:x:vs
+  Lib _ lib            -> lib:vs
   External             -> vs
  where ba:ck:to:sh:[] = "/bin/sh":"-c":"\"$@\"":"sh":[]
        inl decls      = "/bin/sh":"-c":(cast (inline decls)):"sh":[]
        cast           = (:[]) . Right
+
+mergeInlines :: [TOK] -> [TOK]
+mergeInlines = foldr
 
 inline :: Set Sh.Val -> Sh.Val
 inline decls = norm bytes
