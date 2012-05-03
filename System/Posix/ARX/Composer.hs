@@ -1,12 +1,17 @@
 {-# LANGUAGE OverloadedStrings
+           , TupleSections
            , PatternGuards #-}
 
 module System.Posix.ARX.Composer where
 
-import Data.ByteString.Char8 (ByteString)
-import Data.Set
+import Control.Applicative
+import Control.Monad
+import Data.ByteString.Char8 (ByteString, intercalate)
+import Data.Set (Set)
+import qualified Data.Set as Set
 import Data.String
 
+import System.Posix.ARX.Strings
 import qualified System.Posix.ARX.Sh as Sh
 
 
@@ -83,51 +88,66 @@ instance IsString TOK where
   fromString                 =  CMD External . fromString
 
 
-compile                     ::  ExecutionContext -> ExecV -> [Sh.VarVal]
-compile ctx (ExecV tokens)   =  worker ctx tokens
- where
-  worker _ []                =  []
-  worker t (ARG arg:rest)    =  arg : worker t rest
-  worker t (CMD t' arg:rest) =  case t' of
-    Sh _     | Sh False     <- t         -> arg:recurse
-             | otherwise                 -> ba:ck:to:sh:arg:recurse
-    Lib _ x  | Sh False     <- t         -> "exec":x:arg:recurse
-             | Lib False y  <- t, x /= y -> "exec":x:arg:recurse
-             | Lib False y  <- t, x == y -> arg:recurse
-             | otherwise                 -> x:arg:recurse
-    External | Sh False     <- t         -> "exec":arg:recurse
-             | Lib False _  <- t         -> "exec":arg:recurse
-             | otherwise                 -> arg:recurse
-   where recurse             =  worker t' rest
-         ba:ck:to:sh:[]      =  "/bin/sh":"-c":"\"$@\"":"sh":[]
+-- | Compile the execution vector to run in a shell script (which corresponds
+--   to an initial execution context of @Sh{external=False}@).
+compile :: ExecV -> [Sh.VarVal]
+compile (ExecV tokens) = case foldr rollup ([], Nothing) tokens of
+  (args, Nothing)               -> args
+  (free, Just (ctx, following)) -> free ++ (snd . defaulting) ctx ++ following
+   where defaulting = merge (Sh False)
 
+-- | Merge a token in to an execution vector that potentially has an execution
+--   context already set. Takes care of flattening multiple invocations of the
+--   shell and ensuring use of shelling @exec@ when calling external commands.
 rollup :: TOK -> ([Sh.VarVal], Maybe (ExecutionContext, [Sh.VarVal]))
               -> ([Sh.VarVal], Maybe (ExecutionContext, [Sh.VarVal]))
 rollup (ARG v) (vs, s) = (v:vs, s)
-rollup (CMD ctx' v) r  = case r of
-  (vs, Nothing)       -> ([], Just (ctx', vs))
-  (vs, Just (ctx, ys) -> ([], Just (ctx', vs ++ transition ctx' ctx ++ ys))
+rollup (CMD ctx' v) r  = ([],) . Just $ case r of
+  (vs, Nothing)        -> (ctx',  v:vs)
+  (vs, Just (ctx, ys)) -> (ctx'', v:vs ++ transit ++ ys)
+   where (ctx'', transit) = merge ctx' ctx
+
+-- | Merges two execution contexts and potentially inserts code to transition
+--   between them. The merge of two 'Inline' contexts, for example, is an
+--   inline context with definitions from both of them and the transition code
+--   is empty; but the merge of most contexts is simply the leftmost one and
+--   the code inserted by 'transition'.
+merge :: ExecutionContext -> ExecutionContext
+      -> (ExecutionContext, [Sh.VarVal])
+merge ctx' ctx = case ctx' of
+  Sh False       | Sh b        <- ctx -> (Sh b                     , [ ]    )
+                 | otherwise          -> (ctx'                     , transit)
+  Inline False c | Inline b c' <- ctx -> (Inline b (Set.union c c'), [ ]    )
+                 | otherwise          -> (ctx'                     , transit)
+  Lib False lib  | Lib b _     <- ctx -> (Lib b lib                , transit)
+                 | otherwise          -> (ctx'                     , transit)
+  _                                   -> (ctx'                     , transit)
+ where transit = transition ctx' ctx
 
 -- | Insert code that transitions from the first context to the second.
-transition :: ExecutionContext -> ExecutionContenx -> [Sh.VarVal]
-
-
-finalize :: (Maybe ExecutionContext, [Sh.VarVal]) -> [Sh.VarVal]
-finalize (Nothing,  vs) = vs
-finalize (Just ctx, vs) = case ctx of
-  Sh _                 -> ba:ck:to:sh:vs
-  Inline _ decls       -> inl:ine:d:sh:vs where inl:ine:d:sh:[] = inl decls
-  Lib _ lib            -> lib:vs
-  External             -> vs
- where ba:ck:to:sh:[] = "/bin/sh":"-c":"\"$@\"":"sh":[]
-       inl decls      = "/bin/sh":"-c":(cast (inline decls)):"sh":[]
-       cast           = (:[]) . Right
-
-mergeInlines :: [TOK] -> [TOK]
-mergeInlines = foldr
+transition :: ExecutionContext -> ExecutionContext -> [Sh.VarVal]
+transition ctx' ctx = case ctx of
+  Sh _           | Sh False       <- ctx' -> []
+                 | Inline False _ <- ctx' -> "exec" : backToSH
+                 | Lib False _    <- ctx' -> "exec" : backToSH
+                 | otherwise              -> backToSH
+  Inline _ codez | Sh False       <- ctx' -> "exec" : inlined codez
+                 | Inline False _ <- ctx' -> "exec" : inlined codez
+                 | Lib False _    <- ctx' -> "exec" : inlined codez
+                 | otherwise              -> inlined codez
+  Lib _ lib      | Sh False       <- ctx' -> ["exec",lib]
+                 | Inline False _ <- ctx' -> ["exec",lib]
+                 | Lib False lib' <- ctx' -> guard (lib/=lib') >> ["exec",lib]
+                 | otherwise              -> [lib]
+  External       | Sh False       <- ctx' -> ["exec"]
+                 | Inline False _ <- ctx' -> ["exec"]
+                 | Lib False _    <- ctx' -> ["exec"]
+                 | otherwise              -> []
+ where backToSH      = ["/bin/sh","-c","\"$@\"","sh"]
+       inlined codez = ["/bin/sh","-c",Sh.VarVal [Right (inline codez)],"sh"]
 
 inline :: Set Sh.Val -> Sh.Val
-inline decls = norm bytes
+inline decls = norm code
  where
-  code = intercalate "\n" . (++["\"$@\""]) . bytes <$> Set.toList decls
+  code = (intercalate "\n" . (++["\"$@\""])) (bytes <$> Set.toList decls)
 
