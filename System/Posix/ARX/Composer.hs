@@ -88,13 +88,12 @@ instance IsString TOK where
   fromString                 =  CMD External . fromString
 
 
--- | Compile the execution vector to run in a shell script (which corresponds
---   to an initial execution context of @Sh{external=False}@).
-compile :: ExecV -> [Sh.VarVal]
-compile (ExecV tokens) = case foldr rollup ([], Nothing) tokens of
-  (args, Nothing)               -> args
-  (free, Just (ctx, following)) -> free ++ (snd . defaulting) ctx ++ following
-   where defaulting = merge (Sh False)
+-- | Compile the execution vector to run in the given execution context.
+compile :: ExecutionContext -> ExecV -> (ExecutionContext, [Sh.VarVal])
+compile ctx' (ExecV tokens) = case foldr rollup ([], Nothing) tokens of
+  (args, Nothing)               -> (ctx', args)
+  (free, Just (ctx, following)) -> (final, free ++ transit ++ following)
+   where (final, transit) = merge ctx' ctx
 
 -- | Merge a token in to an execution vector that potentially has an execution
 --   context already set. Takes care of flattening multiple invocations of the
