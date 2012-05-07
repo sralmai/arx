@@ -71,9 +71,6 @@ data ExecutionContext
              --   call "$@". If they're not just function declarations and
              --   default settings, strange things may happen.
            }
-  | Lib { external :: Bool
-        , source :: Sh.VarVal -- ^ File to call into for this library.
-        }
   | External
  deriving (Eq, Ord, Show)
 
@@ -118,8 +115,6 @@ merge ctx' ctx = case ctx' of
                  | otherwise          -> (ctx'                     , transit)
   Inline False c | Inline b c' <- ctx -> (Inline b (Set.union c c'), [ ]    )
                  | otherwise          -> (ctx'                     , transit)
-  Lib False lib  | Lib b _     <- ctx -> (Lib b lib                , transit)
-                 | otherwise          -> (ctx'                     , transit)
   _                                   -> (ctx'                     , transit)
  where transit = transition ctx' ctx
 
@@ -128,19 +123,12 @@ transition :: ExecutionContext -> ExecutionContext -> [Sh.VarVal]
 transition ctx' ctx = case ctx of
   Sh _           | Sh False       <- ctx' -> []
                  | Inline False _ <- ctx' -> "exec" : backToSH
-                 | Lib False _    <- ctx' -> "exec" : backToSH
                  | otherwise              -> backToSH
   Inline _ codez | Sh False       <- ctx' -> "exec" : inlined codez
                  | Inline False _ <- ctx' -> "exec" : inlined codez
-                 | Lib False _    <- ctx' -> "exec" : inlined codez
                  | otherwise              -> inlined codez
-  Lib _ lib      | Sh False       <- ctx' -> ["exec",lib]
-                 | Inline False _ <- ctx' -> ["exec",lib]
-                 | Lib False lib' <- ctx' -> guard (lib/=lib') >> ["exec",lib]
-                 | otherwise              -> [lib]
   External       | Sh False       <- ctx' -> ["exec"]
                  | Inline False _ <- ctx' -> ["exec"]
-                 | Lib False _    <- ctx' -> ["exec"]
                  | otherwise              -> []
  where backToSH      = ["/bin/sh","-c","\"$@\"","sh"]
        inlined codez = ["/bin/sh","-c",Sh.VarVal [Right (inline codez)],"sh"]
