@@ -1,58 +1,25 @@
 #!/bin/sh
 set -e -u
-# A token that is very likely unique on this machine.
-phases() {
-  mktmp
-  trap_tmp/level_1
-  unpack/meta
-  root when root?
-  screen/init when screen?
-  clear/non_vcs when vcs?
-  unpack/archives
-  screen/launch when screen?
-  trap_tmp/level_2 when screen?
-  file_sources....      # ┓ Can be reordered with respect to
-  detach when detach?   # ┛ one another.
-  clear/env when clear/env?
-  env
-  lxc when lxc?
-  run
-}
+
+# Settings
+#
+
+# Options processing.
+#
+
+# Inlined definitions of main, defaults, &c.
+#
+
 go() {
-  : ${cwd:=cwd}
-  : ${rm0:=true}
-  : ${rm1:=true}
-  : ${tmp:=/tmp}
-  : ${tag:=arx}
-  tmp
-  preamble
-  mkdir -p "$cwd"
-  cd "$cwd"
-  cwd="`pwd -P`" # Update run directory with absolute path.
+  cd_p "$work_dir"
   archives
-  usercode "$@"
+  //wrappers// \
+  env //env// \
+  sh -c 'exec "$@"' sh ... "$@"
 }
-# Exec user code with environment by way of lib. One way or another, we have
-# to start a subshell; it's not so terrible that we do it by way of calling
-# lib, in a new shell.
-usercode() {
-  "$dir"/lib \
-    # flock_ \
-    # screen_ \
-    # tmux_ \
-    dir_dealloc "$dir" \
-    # logger_ \
-    # tee_    \
-    source_ "$dir"/env \
-    # lxc_ \
-    exec_ ./run "$@"
-}
-# Unpack any preamble material -- lib, env and run
-preamble() {
-  # { ...put SHDAT tarball here... } | tar xz
-}
-# Unpack user data archives.
+
 archives() {
+  cd_p "$work_dir"
   # { ...put SHDAT tarball here... } | tar x
   # { ...put SHDAT tarball here... } | tar xz
   # { ...put SHDAT tarball here... } | tar xj
