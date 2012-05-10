@@ -130,7 +130,7 @@ trap_tmp=
 trap_on() {
   [ ! "${trap_tmp:-}" ] ||
   err 'trap_on: Var trap_tmp already in use! Was trap_on called twice???!!?!'
-  trap_tmp="$1"
+  trap_tmp="$1" ; shift
   trap 'case $?/$rm0/$rm1 in
           0/true/*)      rm -rf "$trap_tmp" ;;
           [1-9]*/*/true) rm -rf "$trap_tmp" ;;
