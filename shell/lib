@@ -1,6 +1,14 @@
 #!/bin/sh
 # Note that some functions have "signatures" given with #### comments. Be sure
 # to update the signatures when their dependencies on global variables change.
+#
+# Why are the signatures given? The lib does not communicate between functions
+# with environment variables to avoid leaking or overwriting variables
+# visible to user code; instead variables internal to the executing shell are
+# set by the `main' function as it processes its argument list. Those
+# functions which receive information from other functions with variables in
+# this way must be called behind a call to `main' with the variables set; the
+# signature provides this information.
 
 main() {
   set -eu
@@ -22,6 +30,21 @@ defaults() {
   : ${syslog_tag:=$tag}
   pwd="`pwd -P`"
   "$@"
+}
+
+echo_env() {
+  echo "rm0=$rm0"
+  echo "rm1=$rm1"
+  echo "tmp=$tmp"
+  echo "flat_token=$flat_token"
+  echo "prefix=$prefix"
+  echo "token=$token"
+  echo "tag=$tag"
+  echo "screen=$screen"
+  echo "dir=$dir"
+  echo "work_dir=$work_dir"
+  echo "syslog_tag=$syslog_tag"
+  echo "pwd=$pwd"
 }
 
 # Use recursion to process arguments for name=value pairs and set local shell
@@ -125,7 +148,7 @@ cd_p() {
 }
 
 # Return to the start directory.
-## main pwd=... popd_
+#### main pwd=... popd_
 popd_() {
   cd "$pwd"
   "$@"
@@ -152,7 +175,7 @@ trap_off() {
 }
 
 # Create staging area and set a trap to ensure its removal.
-## main dir=... tmp
+#### main dir=... tmp
 tmp() {
   mkdir -p "`dirname "$dir"`"
   mkdir "$dir" # Fail if dir exists.
