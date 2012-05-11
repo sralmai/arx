@@ -49,13 +49,15 @@ echo_env() {
 
 # Use recursion to process arguments for name=value pairs and set local shell
 # variables in accord with them. When we're done with name=value pairs, call
-# $1 with the remaining arguments.
+# $1 with the remaining arguments. The string `--' always ends the list of
+# name value pairs.
 vars() {
   command="$1" ; shift
   case "${1:-}" in
     command=*) err 'vars: It is an error to set command=...' ;;
     *=*)       typeset "$1" ; shift ; vars "$command" "$@" ;;
-    *)         "$command" "$@"
+    --)        shift ; "$command" "$@" ;;
+    *)         "$command" "$@" ;;
   esac
 }
 
