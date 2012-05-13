@@ -26,35 +26,14 @@ instance Monoid (Wrapped t) where
    where (ctx', transit) = merge ctx ctx_
          defs' = defs ++ (l, transit ++ code):t
 
-
--- | Commands and the contexts in which they can be executed:
---
--- *  An 'Inline' command has its code -- a shell function definition -- made
---    available by way of wrapping it with @sh -c '...'@. For example, a
---    function @const <something>@ that prints the first argument no matter
---    what the other arguments are given might be called like this:
---
--- >  const a b c
---
---    It must be inlined like this:
---
--- >  sh -c 'const() { echo "$1" ;} ; "$@"' sh const a b c
---
--- *  An 'External' command is an executable file, resolvable with @which@.
---
---   When treated as wrappers, each command potentially changes the execution
---   context; so we may need to insert explicit calls to @sh@ or the library.
+-- | Execution contexts for wrappers. For common wrappers, like @flock@ or
+--   @screen@, there's no real context needed; this is the @external@ context;
+--   but for shell functions that are used as wrappers we need a way to inline
+--   their code, escaped in a such a way that the calling shell (always @sh@
+--   in ARX) simply passes it on.
 data ExecutionContext
-  = Inline { external :: Bool
-             -- ^ A shell function might place us in an external context when
-             --   it is done.
-           , code :: Set Sh.Val
-             -- ^ A set of declarations to inline, one of which is likely to
-             --   be a definition of the command to be called. The declarations
-             --   are inlined in /arbitrary order/ with a little postamble to
-             --   call "$@". If they're not just function declarations and
-             --   default settings, strange things may happen.
-           }
+  = InlineSh   Sh.VarVal -- ^ Sh code.
+  | InlineBash Sh.VarVal -- ^ Bash code.
   | External
  deriving (Eq, Ord, Show)
 
