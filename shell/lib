@@ -10,12 +10,25 @@
 # this way must be called behind a call to `main' with the variables set; the
 # signature provides this information.
 
-main() {
+dispatch() {
   set -eu
   vars defaults "$@"
 }
 
-# Sets defualts for unset vars and calls "$@".
+err() {
+  msg "$@"
+  exit 2
+}
+
+msg() {
+  printf '%s\n' "$*" 1>&2
+}
+
+out() {
+  printf '%s\n' "$*"
+}
+
+# Sets defaults for unset vars and calls "$@".
 defaults() {
   : ${rm0:=true}
   : ${rm1:=true}
@@ -69,8 +82,6 @@ time_and_pid() {
   date -u +%FT%TZ#$$ | { ! $1 && cat || { tr -d :- | tr '#' _ ;} ;}
 }
 
-
-#### main screen=... screen_S
 screen_S() {
   screen -S "$screen" "$@"
 }
@@ -80,7 +91,7 @@ screen_S() {
 #
 #   screen_setup 'zombie ko' 'defutf8 on'
 #
-#### main screen=... screen_setup
+#### inner screen=...
 screen_setup=false
 screen_setup() {
   if ! $screen_setup
@@ -94,18 +105,17 @@ screen_setup() {
 }
 
 # Launch command in initialized screen.
-#### main screen=... screen_run
-screen_run() {
-  screen_setup
+#### outer screen=...
+screen_() {
   screen_S -X screen 0 "$@"
   screen_S -X eval 'select 1' kill
   msg "New screen is:"
   out "$screen"
 }
 
-
 # Use curl to retrieve an archive, unpack it based on the type passed in, then
 # execute other commands.
+#### inner
 curl_archive() {
   curl --connection-timeout 100 -L "$1" |
   case "$2" in
@@ -118,8 +128,7 @@ curl_archive() {
   "$@"
 }
 
-
-#### main syslog_tag=... logger_
+#### inner syslog_tag=...
 logger_() {
   exec 4>&2 # Save the function's STDERR to &4.
 { exec 3>&1 # Save the grouping's STDERR to &3.
@@ -128,7 +137,6 @@ logger_() {
 }|logger -t "$syslog_tag" -i -p user.info -s 2>&1 1>&1 # &3 is in the pipe.
 }
 
-
 # Portably determine a canonical path for the first argument. Intended to
 # emulate `readlink --canonical' on systems that have a readlink which
 # supports it.
@@ -136,12 +144,11 @@ canonical_path() {
   ( cd "`dirname "$1"`"
     d="`pwd -P`"
     out "$d"/"`basename "$1"`"
-  )
-# LOLziness -- the canonical path of '.' is always '<something>/.'
+  ) # LOLziness -- the canonical path of '.' is always '<something>/.'
 }
 
-
 # Create the target directory and move to it.
+####
 cd_p() {
   mkdir -p "$1"
   cd "$1"
@@ -150,13 +157,14 @@ cd_p() {
 }
 
 # Return to the start directory.
-#### main pwd=... popd_
+#### inner pwd=...
 popd_() {
   cd "$pwd"
   "$@"
 }
 
 # Set a trap to remove the argument directory.
+#### inner
 trap_tmp=
 trap_on() {
   [ ! "${trap_tmp:-}" ] ||
@@ -172,12 +180,14 @@ trap_on() {
 }
 
 # Disable the directory removal trap.
+#### inner
 trap_off() {
   trap - EXIT HUP INT QUIT BUS SEGV PIPE TERM
+  "$@"
 }
 
 # Create staging area and set a trap to ensure its removal.
-#### main dir=... tmp
+#### inner dir=...
 tmp() {
   mkdir -p "`dirname "$dir"`"
   mkdir "$dir" # Fail if dir exists.
@@ -186,19 +196,6 @@ tmp() {
   trap_tmp "$@"
 }
 
-
-err() {
-  msg "$@"
-  exit 2
-}
-
-msg() {
-  printf '%s\n' "$*" 1>&2
-}
-
-out() {
-  printf '%s\n' "$*"
-}
 
 main "$@"
 

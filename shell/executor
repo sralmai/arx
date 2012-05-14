@@ -3,28 +3,63 @@ set -e -u
 
 # Settings
 #
+: ${dm:=false}
+tmpx=`{ $dm && $tmpx ;} && echo true || echo false`
+dm_tmpx=`{ $dm && $tmpx ;} && echo true || echo false`
 
-# Options processing.
-#
-
-# Inlined definitions of main, defaults, &c.
-#
-
-go() {
-  cd_p "$work_dir"
-  archives
-  //wrappers// \
-  env //env// \
-  sh -c 'exec "$@"' sh ... "$@"
+work='...'
+work() {
+  set -- sh -c "$work" sh "$@"
+  set -- env ... "$@"
+  ! $downloads || set -- sh -c '...' downloads ... "$@"
+  ! $dm_tmpx   || set -- sh -c '...' sh trap_on "$dir" "$@"
+  ! $dm        || set -- sh -c '...' screend ... "$@"
+  ! $dm_tmpx   || set -- trap_off "$@"
+  ! $sources   || set -- sources "$@"
+  ! $archives  || set -- archives "$@"
+  ! $tmpx      || set -- tmp ... "$@"
+  ## ! $dirs      || set -- mkdir_ ... "$@"
+  "$@"
 }
 
+# Receive arguments and set various options as needed.
+main() {
+  vars cd_p "$work_dir" work "$@"
+}
+
+trap_on() {
+  trap_tmp="$1" ; shift
+  trap 'case $?/$rm0/$rm1 in
+          0/true/*)      rm -rf "$trap_tmp" ;;
+          [1-9]*/*/true) rm -rf "$trap_tmp" ;;
+        esac' EXIT
+  trap 'exit 2' HUP INT QUIT BUS SEGV PIPE TERM
+  ( "$@" )
+}
+trap_off() {
+  trap - EXIT HUP INT QUIT BUS SEGV PIPE TERM
+  "$@"
+}
+tmp() {
+  mkdir -p "`dirname "$1"`"
+  mkdir "$1" # Fail if dir exists.
+  cd "$1"
+  dir="`pwd -P`" # Update staging directory with absolute path.
+  trap_on "$dir" "$@"
+}
+mkdir_() {
+  mkdir -p "$1"
+  cd "$1"
+  dir="`pwd -P`" # Update staging directory with absolute path.
+  "$@"
+}
 archives() {
-  cd_p "$work_dir"
   # { ...put SHDAT tarball here... } | tar x
   # { ...put SHDAT tarball here... } | tar xz
   # { ...put SHDAT tarball here... } | tar xj
   # { ...put SHDAT tarball here... } | tar xz
   # { ...put SHDAT tarball here... } | tar x
+  "$@"
 }
-go "$@" # Args are simply passed to the user's program.
+main
 exit
