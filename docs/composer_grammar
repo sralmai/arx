@@ -1,0 +1,20 @@
+
+  <composer>                  = <directory>? (<source>|<archive>)*
+                                <daemonize>? (<source>|<wrapper>)*
+
+
+  <directory>                 = tmp// <options> | cd// <path>
+
+  <archive>                   = @// (<path>|-)
+
+  <source>                    = curl+tar// ...
+                              | git// ...
+
+  <daemonize>                 = screen// <options>
+
+  <wrapper>                   = <general> | <special>
+
+  <general>                   = bash// ... | sh// ... | !// ...
+
+  <special>                   = syslog// <options> | flock// <options>
+
