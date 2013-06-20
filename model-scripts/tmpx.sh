@@ -35,7 +35,7 @@ opts() {
   # Set the trap.
   if $tmp
   then
-    dir=/tmp/tmpx-"$token"
+    dir=/mnt/tmp/tmpx-"$token"
     : ${rm_:=true}
     if $rm_
     then
